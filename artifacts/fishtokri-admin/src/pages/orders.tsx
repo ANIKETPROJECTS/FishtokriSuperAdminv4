@@ -23,6 +23,14 @@ import iconView from "@/assets/icon-view.png";
 import iconEdit from "@/assets/icon-edit.png";
 import iconDelete from "@/assets/icon-delete.png";
 import recycleIcon from "@/assets/recycling-symbol.png";
+import iconUser from "@/assets/icon-user.png";
+import iconPhoneCall from "@/assets/icon-phone-call.png";
+import iconPin from "@/assets/icon-pin.png";
+import iconGrocery from "@/assets/icon-grocery.png";
+import iconWallet from "@/assets/icon-wallet.png";
+import iconMotorbike from "@/assets/icon-motorbike.png";
+import iconGroup from "@/assets/icon-group.png";
+import iconClipboardCheck from "@/assets/icon-clipboard-check.png";
 import { BRAND_COLORS } from "@/lib/brand";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -207,6 +215,15 @@ function effectiveOrderTotal(o: any): number {
   const discount = Number(o?.discount) || 0;
   const slot = Number(o?.slotCharge) || 0;
   return Math.max(0, subtotal - discount + slot);
+}
+
+function formatOrderId(o: any): string {
+  const d = o?.createdAt ? new Date(o.createdAt) : null;
+  const datePart = d
+    ? `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`
+    : "00000000";
+  const seq = String(o?._id || "").slice(-6).toUpperCase();
+  return `FT ${datePart} ${seq}`;
 }
 
 function numberToWords(n: number): string {
@@ -3424,59 +3441,57 @@ export default function Orders() {
       <Sheet open={!!selectedOrder} onOpenChange={(o) => { if (!o) { setSelectedOrder(null); setShowAllPersons(false); } }}>
         <SheetContent
           side="right"
-          className="w-full sm:max-w-[640px] p-0 flex flex-col gap-0 bg-gray-50"
+          className="w-full sm:max-w-[560px] p-0 flex flex-col gap-0 bg-white"
         >
           {selectedOrder && (
             <>
-              {/* Top header — brand pink band with order id + status */}
-              <SheetHeader className="px-6 pt-6 pb-5 bg-white border-b border-gray-200 space-y-3">
+              {/* ── Header ── */}
+              <SheetHeader className="px-6 pt-5 pb-4 bg-white border-b border-gray-100">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1 min-w-0">
-                    <SheetTitle className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  <div className="min-w-0">
+                    <SheetTitle className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
                       Order Details
                     </SheetTitle>
-                    <p className="text-lg font-bold text-black truncate">
-                      #{String(selectedOrder._id || "").slice(-8).toUpperCase()}
+                    <p className="text-xl font-extrabold text-[#1A56DB] tracking-tight leading-none">
+                      {formatOrderId(selectedOrder)}
                     </p>
-                    <p className="text-xs text-gray-500">{formatDate(selectedOrder.createdAt)}</p>
+                    <p className="text-xs text-gray-400 mt-1.5">{formatDate(selectedOrder.createdAt)}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <StatusBadge status={selectedOrder.status} deliveryType={selectedOrder.deliveryType} />
-                    <span className="text-[11px] font-semibold text-brand-secondary">
-                      {effectiveOrderTotal(selectedOrder) > 0
-                        ? formatRupees(effectiveOrderTotal(selectedOrder))
-                        : formatRupees(orderTotal(selectedOrder.items))}
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    <SolidStatusBadge status={selectedOrder.status} deliveryType={selectedOrder.deliveryType} />
+                    <span className="text-base font-extrabold text-[#F97316]">
+                      {formatRupees(effectiveOrderTotal(selectedOrder) > 0 ? effectiveOrderTotal(selectedOrder) : orderTotal(selectedOrder.items))}
                     </span>
                   </div>
                 </div>
               </SheetHeader>
 
-              {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              {/* ── Scrollable body ── */}
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
 
-                {/* === Customer card === */}
-                <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <header className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-brand-primary" />
-                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Customer</h3>
-                  </header>
-                  <div className="p-4 flex gap-3">
-                    <div className="w-11 h-11 rounded-full bg-brand-primary-50 flex items-center justify-center flex-shrink-0 border border-brand-primary-100">
-                      <span className="text-sm font-bold text-brand-primary">
+                {/* ── 1. CUSTOMER ── */}
+                <div className="px-6 py-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MaskIcon src={iconUser} color="#1A56DB" className="w-[16px] h-[16px]" />
+                    <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Customer</span>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-[#EBF2FF] flex items-center justify-center flex-shrink-0 border-2 border-[#1A56DB]/20">
+                      <span className="text-base font-extrabold text-[#1A56DB]">
                         {(selectedOrder.customerName || "?").trim().charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <p className="font-semibold text-black text-[15px] leading-tight">{selectedOrder.customerName}</p>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <p className="font-bold text-black text-[16px] leading-tight">{selectedOrder.customerName}</p>
                       {selectedOrder.phone && (
-                        <a href={`tel:${selectedOrder.phone}`} className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-brand-secondary">
-                          <Phone className="w-3.5 h-3.5 text-gray-400" />
+                        <a href={`tel:${selectedOrder.phone}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#1A56DB] transition-colors">
+                          <MaskIcon src={iconPhoneCall} color="#1A56DB" className="w-[14px] h-[14px] flex-shrink-0" />
                           <span>{selectedOrder.phone}</span>
                         </a>
                       )}
                       {selectedOrder.address && (
-                        <div className="flex items-start gap-1.5 text-sm text-gray-700">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <MaskIcon src={iconPin} color="#F97316" className="w-[14px] h-[14px] flex-shrink-0 mt-0.5" />
                           <span className="leading-snug">
                             {selectedOrder.address}
                             {selectedOrder.deliveryArea && (
@@ -3487,40 +3502,34 @@ export default function Orders() {
                       )}
                     </div>
                   </div>
-                </section>
+                </div>
 
-                {/* === Items + Bill summary card === */}
-                <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                {/* ── 2. ORDER ITEMS ── */}
+                <div className="px-6 py-5">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <ShoppingBag className="w-3.5 h-3.5 text-brand-primary" />
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Order Items</h3>
+                      <MaskIcon src={iconGrocery} color="#1A56DB" className="w-[16px] h-[16px]" />
+                      <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Order Items</span>
                     </div>
-                    <span className="text-[11px] font-semibold text-gray-500">
+                    <span className="text-xs font-semibold text-gray-400">
                       {(selectedOrder.items ?? []).length} item{(selectedOrder.items ?? []).length !== 1 ? "s" : ""}
                     </span>
-                  </header>
-
-                  <ul className="divide-y divide-gray-100">
+                  </div>
+                  <ul className="space-y-3">
                     {(selectedOrder.items ?? []).map((item: any, i: number) => {
                       const qty = Number(item.quantity || 1);
                       const lineTotal = Number(item.price) * qty;
                       return (
-                        <li key={i} className="px-4 py-3 flex items-center justify-between gap-3">
+                        <li key={i} className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-black text-sm truncate">{item.name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {qty} × {formatRupees(Number(item.price))}
-                            </p>
+                            <p className="font-semibold text-black text-sm">{item.name}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{qty} × {formatRupees(Number(item.price))}</p>
                           </div>
-                          <span className="font-semibold text-black text-sm whitespace-nowrap">
-                            {formatRupees(lineTotal)}
-                          </span>
+                          <span className="font-bold text-black text-sm whitespace-nowrap">{formatRupees(lineTotal)}</span>
                         </li>
                       );
                     })}
                   </ul>
-
                   {(() => {
                     const subtotal = orderTotal(selectedOrder.items);
                     const discount = Number(selectedOrder.discount) || 0;
@@ -3528,235 +3537,194 @@ export default function Orders() {
                     const grand = effectiveOrderTotal(selectedOrder);
                     const instant = Number(selectedOrder.instantDeliveryCharge) || 0;
                     return (
-                      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 space-y-1.5">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Subtotal</span>
-                          <span className="text-black">{formatRupees(subtotal)}</span>
+                      <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
+                        <div className="flex justify-between text-sm text-gray-500">
+                          <span>Subtotal</span>
+                          <span>{formatRupees(subtotal)}</span>
                         </div>
                         {discount > 0 && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-emerald-700">
-                              Coupon{selectedOrder.couponCode ? ` (${selectedOrder.couponCode})` : ""}
-                            </span>
-                            <span className="text-emerald-700">− {formatRupees(discount)}</span>
+                            <span className="text-emerald-600">Coupon{selectedOrder.couponCode ? ` (${selectedOrder.couponCode})` : ""}</span>
+                            <span className="text-emerald-600">− {formatRupees(discount)}</span>
                           </div>
                         )}
                         {slot > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Slot charge</span>
-                            <span className="text-black">+ {formatRupees(slot)}</span>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>Slot charge</span>
+                            <span>+ {formatRupees(slot)}</span>
                           </div>
                         )}
                         {instant > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Instant delivery</span>
-                            <span className="text-black">+ {formatRupees(instant)}</span>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>Instant delivery</span>
+                            <span>+ {formatRupees(instant)}</span>
                           </div>
                         )}
-                        <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200">
-                          <span className="text-sm font-semibold text-black">Grand Total</span>
-                          <span className="text-base font-bold text-brand-primary">{formatRupees(grand)}</span>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                          <span className="font-bold text-black text-sm">Grand Total</span>
+                          <span className="font-extrabold text-[#F97316] text-base">{formatRupees(grand)}</span>
                         </div>
                       </div>
                     );
                   })()}
-                </section>
+                </div>
 
-                {/* === Payment card === */}
+                {/* ── 3. PAYMENT ── */}
                 {(() => {
                   const pays: any[] = Array.isArray(selectedOrder.payments) ? selectedOrder.payments : [];
                   const status = String(selectedOrder.paymentStatus || "").toLowerCase();
                   const paid = Number(selectedOrder.paidAmount) || pays.reduce((s, p) => s + (Number(p?.amount) || 0), 0);
                   const due = Number(selectedOrder.dueAmount) || 0;
                   if (!pays.length && !status && !paid) return null;
-                  const statusStyle =
-                    status === "paid"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : status === "partial"
-                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                      : "bg-gray-100 text-gray-600 border-gray-200";
-                  const statusLabel =
-                    status === "paid" ? "Fully Paid" : status === "partial" ? "Partial" : status === "unpaid" ? "Unpaid" : "—";
+                  const statusStyle = status === "paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : status === "partial" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-600 border-red-200";
+                  const statusLabel = status === "paid" ? "Fully Paid" : status === "partial" ? "Partial" : "Unpaid";
                   return (
-                    <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                      <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div className="px-6 py-5">
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Wallet className="w-3.5 h-3.5 text-brand-primary" />
-                          <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Payment</h3>
+                          <MaskIcon src={iconWallet} color="#1A56DB" className="w-[16px] h-[16px]" />
+                          <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Payment</span>
                         </div>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusStyle}`}>
-                          {statusLabel}
-                        </span>
-                      </header>
-
-                      <div className="p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                            <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Paid</p>
-                            <p className="text-sm font-semibold text-black mt-0.5">{formatRupees(paid)}</p>
-                          </div>
-                          <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                            <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Due</p>
-                            <p className={`text-sm font-semibold mt-0.5 ${due > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                              {formatRupees(due)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {pays.length > 0 ? (
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Transactions</p>
-                            {pays.map((p, i) => {
-                              const meta = PAYMENT_MODES.find((m) => m.value === String(p?.mode || "").toLowerCase());
-                              const label = meta?.label || (p?.mode ? String(p.mode) : "Payment");
-                              return (
-                                <div
-                                  key={i}
-                                  className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2"
-                                >
-                                  <span className="text-sm text-black">{label}</span>
-                                  <span className="text-sm font-semibold text-black">
-                                    {formatRupees(Number(p?.amount) || 0)}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-gray-500 italic">No payments collected yet.</p>
-                        )}
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusStyle}`}>{statusLabel}</span>
                       </div>
-                    </section>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="bg-gray-50 rounded-xl px-4 py-3">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-1">Paid</p>
+                          <p className="text-base font-bold text-black">{formatRupees(paid)}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl px-4 py-3">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-1">Due</p>
+                          <p className={`text-base font-bold ${due > 0 ? "text-[#F97316]" : "text-emerald-600"}`}>{formatRupees(due)}</p>
+                        </div>
+                      </div>
+                      {pays.length > 0 && (
+                        <div className="space-y-2">
+                          {pays.map((p, i) => {
+                            const meta = PAYMENT_MODES.find((m) => m.value === String(p?.mode || "").toLowerCase());
+                            const label = meta?.label || (p?.mode ? String(p.mode) : "Payment");
+                            return (
+                              <div key={i} className="flex items-center justify-between py-2 border-t border-gray-100">
+                                <span className="text-sm text-gray-600">{label}</span>
+                                <span className="text-sm font-semibold text-black">{formatRupees(Number(p?.amount) || 0)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })()}
 
-                {/* === Delivery & Hub card === */}
-                <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <header className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                    <Truck className="w-3.5 h-3.5 text-brand-primary" />
-                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Delivery & Hub</h3>
-                  </header>
-                  <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                {/* ── 4. DELIVERY & HUB ── */}
+                <div className="px-6 py-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MaskIcon src={iconMotorbike} color="#1A56DB" className="w-[16px] h-[16px]" />
+                    <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Delivery & Hub</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <div>
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Type</p>
-                      <p className="font-medium text-black capitalize mt-0.5">{selectedOrder.deliveryType ?? "—"}</p>
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-0.5">Type</p>
+                      <p className="font-semibold text-black capitalize">{selectedOrder.deliveryType ?? "—"}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Date</p>
-                      <p className="font-medium text-black mt-0.5">{formatDate(selectedOrder.createdAt)}</p>
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-0.5">Date</p>
+                      <p className="font-semibold text-black">{formatDate(selectedOrder.createdAt)}</p>
                     </div>
                     {selectedOrder.timeslotLabel && (
                       <div className="col-span-2">
-                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Time Slot</p>
-                        <p className="font-medium text-black mt-0.5">{selectedOrder.timeslotLabel}</p>
+                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-0.5">Time Slot</p>
+                        <p className="font-semibold text-black">{selectedOrder.timeslotLabel}</p>
                       </div>
                     )}
                     {selectedOrder.superHubName && (
                       <div>
-                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Super Hub</p>
-                        <p className="font-medium text-black mt-0.5">{selectedOrder.superHubName}</p>
+                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-0.5">Super Hub</p>
+                        <p className="font-semibold text-black">{selectedOrder.superHubName}</p>
                       </div>
                     )}
                     {selectedOrder.subHubName && (
                       <div>
-                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Sub Hub</p>
-                        <p className="font-medium text-black mt-0.5">{selectedOrder.subHubName}</p>
+                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-0.5">Sub Hub</p>
+                        <p className="font-semibold text-black">{selectedOrder.subHubName}</p>
                       </div>
                     )}
                     {selectedOrder.notes && (
-                      <div className="col-span-2 pt-2 border-t border-gray-100">
-                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Customer Notes</p>
-                        <p className="text-sm text-gray-700 italic mt-0.5">"{selectedOrder.notes}"</p>
+                      <div className="col-span-2 pt-3 border-t border-gray-100">
+                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-1">Customer Notes</p>
+                        <p className="text-sm text-gray-600 italic">"{selectedOrder.notes}"</p>
                       </div>
                     )}
                   </div>
-                </section>
+                </div>
 
-                {/* === Delivery Partner card === */}
+                {/* ── 5. DELIVERY PARTNER ── */}
                 {selectedOrder.deliveryType === "takeaway" ? (
-                  <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <header className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                      <ShoppingBag className="w-3.5 h-3.5 text-brand-primary" />
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Pickup</h3>
-                    </header>
-                    <div className="p-4 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                  <div className="px-6 py-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <MaskIcon src={iconGroup} color="#1A56DB" className="w-[16px] h-[16px]" />
+                      <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Delivery Partner</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
                         <ShoppingBag className="w-4 h-4 text-emerald-600" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div>
                         <p className="text-sm font-semibold text-black">Takeaway order</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Customer picks up from {selectedOrder.pickupLocation || selectedOrder.subHubName || "the store"}.
-                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">Customer picks up from {selectedOrder.pickupLocation || selectedOrder.subHubName || "the store"}.</p>
                       </div>
                     </div>
-                  </section>
+                  </div>
                 ) : (
-                  <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <div className="px-6 py-5">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <UserCheck className="w-3.5 h-3.5 text-brand-primary" />
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Delivery Partner</h3>
+                        <MaskIcon src={iconGroup} color="#1A56DB" className="w-[16px] h-[16px]" />
+                        <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Delivery Partner</span>
                       </div>
                       {modalFiltered && (
-                        <button
-                          onClick={() => setShowAllPersons((v) => !v)}
-                          className="text-[10px] font-semibold text-brand-secondary hover:text-brand-secondary-600"
-                        >
-                          {showAllPersons ? "Show hub-only" : `Show all`}
+                        <button onClick={() => setShowAllPersons((v) => !v)} className="text-[10px] font-semibold text-[#F97316] hover:underline">
+                          {showAllPersons ? "Show hub-only" : "Show all"}
                         </button>
                       )}
-                    </header>
-
-                    <div className="p-4 space-y-3">
-                      {/* Currently assigned */}
+                    </div>
+                    <div className="space-y-3">
                       {selectedOrder.assignedDeliveryPersonName && (
-                        <div className="flex items-center gap-3 px-3 py-2.5 bg-brand-primary-50 border border-brand-primary-100 rounded-lg">
-                          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-shrink-0 border border-brand-primary-100">
-                            <Truck className="w-4 h-4 text-brand-primary" />
+                        <div className="flex items-center gap-3 px-4 py-3 bg-[#EBF2FF] rounded-xl">
+                          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-shrink-0 border border-[#1A56DB]/20">
+                            <MaskIcon src={iconMotorbike} color="#1A56DB" className="w-[15px] h-[15px]" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-black truncate">{selectedOrder.assignedDeliveryPersonName}</p>
+                            <p className="text-sm font-bold text-black truncate">{selectedOrder.assignedDeliveryPersonName}</p>
                             <p className="text-[11px] text-gray-500">Currently assigned</p>
                           </div>
                           <button
-                            onClick={() => {
-                              setSelectedDeliveryPersonId("__none__");
-                              setTimeout(() => handleAssignDelivery(), 0);
-                            }}
+                            onClick={() => { setSelectedDeliveryPersonId("__none__"); setTimeout(() => handleAssignDelivery(), 0); }}
                             disabled={assigningDelivery}
-                            className="text-[11px] font-semibold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 bg-white px-2.5 py-1 rounded-md transition-colors"
+                            className="text-[11px] font-semibold text-red-600 hover:bg-red-600 hover:text-white border border-red-200 bg-white px-2.5 py-1 rounded-lg transition-colors"
                           >
                             Remove
                           </button>
                         </div>
                       )}
-
                       {modalFiltered && !showAllPersons && (
-                        <p className="text-[11px] text-gray-500">
+                        <p className="text-[11px] text-gray-400">
                           Showing <strong className="text-black">{modalFilteredCount}</strong> partner{modalFilteredCount !== 1 ? "s" : ""} from this order's hub.
                         </p>
                       )}
                       {showAllPersons && (
-                        <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg">
+                        <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl">
                           <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-[11px] text-amber-700">
-                            Showing all partners. For best practice, assign hub-specific partners only.
-                          </p>
+                          <p className="text-[11px] text-amber-700">Showing all partners. For best practice, assign hub-specific partners only.</p>
                         </div>
                       )}
-
-                      {/* Select + Assign */}
                       <div className="flex gap-2">
                         <Select value={selectedDeliveryPersonId} onValueChange={setSelectedDeliveryPersonId}>
-                          <SelectTrigger className="h-10 flex-1 text-sm">
+                          <SelectTrigger className="h-10 flex-1 text-sm rounded-xl">
                             <SelectValue placeholder="Select delivery partner..." />
                           </SelectTrigger>
                           <SelectContent>
                             {modalPersons.length === 0 && (
-                              <div className="py-4 text-center text-xs text-gray-400">
-                                No delivery partners {modalFiltered && !showAllPersons ? "for this hub" : "available"}
-                              </div>
+                              <div className="py-4 text-center text-xs text-gray-400">No delivery partners {modalFiltered && !showAllPersons ? "for this hub" : "available"}</div>
                             )}
                             {modalPersons.map((p) => {
                               const hubs = [
@@ -3766,8 +3734,8 @@ export default function Orders() {
                               return (
                                 <SelectItem key={p.id} value={p.id}>
                                   <div className="flex flex-col">
-                                    <span className="font-medium text-black">{p.name}</span>
-                                    <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                                    <span className="font-semibold text-black">{p.name}</span>
+                                    <div className="flex items-center gap-2 text-[11px] text-gray-400">
                                       {p.phone && <span>{p.phone}</span>}
                                       {hubs.length > 0 && <span>· {hubs.slice(0, 2).join(", ")}{hubs.length > 2 ? ` +${hubs.length - 2}` : ""}</span>}
                                     </div>
@@ -3780,43 +3748,39 @@ export default function Orders() {
                         <Button
                           onClick={handleAssignDelivery}
                           disabled={assigningDelivery || !selectedDeliveryPersonId}
-                          className="bg-brand-secondary hover:bg-brand-secondary-600 h-10 px-4 text-white font-semibold"
+                          className="bg-[#1A56DB] hover:bg-[#1447B4] h-10 px-5 text-white font-bold rounded-xl"
                         >
                           {assigningDelivery ? "Saving..." : "Assign"}
                         </Button>
                       </div>
-
                       {deliveryPersons.length === 0 && (
                         <p className="text-[11px] text-gray-400 italic">No delivery persons found. Add them via Admin Users.</p>
                       )}
                     </div>
-                  </section>
+                  </div>
                 )}
 
-                {/* === Status Update card === */}
-                <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                {/* ── 6. UPDATE STATUS ── */}
+                <div className="px-6 py-5">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <ClipboardList className="w-3.5 h-3.5 text-brand-primary" />
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Update Status</h3>
+                      <MaskIcon src={iconClipboardCheck} color="#1A56DB" className="w-[16px] h-[16px]" />
+                      <span className="text-[11px] font-bold text-[#1A56DB] uppercase tracking-widest">Update Status</span>
                     </div>
-                    <StatusBadge status={selectedOrder.status} deliveryType={selectedOrder.deliveryType} />
-                  </header>
-                  <div className="p-4 space-y-2">
+                    <SolidStatusBadge status={selectedOrder.status} deliveryType={selectedOrder.deliveryType} />
+                  </div>
+                  <div className="space-y-2">
                     {(() => {
                       const isTakeaway = selectedOrder.deliveryType === "takeaway";
                       const hasAssignee = !!selectedOrder.assignedDeliveryPersonId;
-                      const requiresAssignee = (s: string) =>
-                        !isTakeaway && !hasAssignee && (s === "out_for_delivery" || s === "delivered");
-                      const statusOptions = isTakeaway
-                        ? ["takeaway", "cancelled"]
-                        : ALL_STATUSES.filter((s) => s !== "takeaway");
+                      const requiresAssignee = (s: string) => !isTakeaway && !hasAssignee && (s === "out_for_delivery" || s === "delivered");
+                      const statusOptions = isTakeaway ? ["takeaway", "cancelled"] : ALL_STATUSES.filter((s) => s !== "takeaway");
                       const blocked = requiresAssignee(editStatus);
                       return (
                         <>
                           <div className="flex gap-2">
                             <Select value={editStatus} onValueChange={setEditStatus}>
-                              <SelectTrigger className="h-10 flex-1 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-10 flex-1 text-sm rounded-xl"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {statusOptions.map((s) => {
                                   const disabled = requiresAssignee(s);
@@ -3834,13 +3798,13 @@ export default function Orders() {
                             <Button
                               onClick={handleStatusUpdate}
                               disabled={savingStatus || blocked || editStatus === displayStatus(selectedOrder.status, selectedOrder.deliveryType)}
-                              className="bg-brand-primary hover:bg-brand-primary-600 h-10 px-5 text-white font-semibold"
+                              className="bg-[#F97316] hover:bg-[#ea6c0a] h-10 px-5 text-white font-bold rounded-xl"
                             >
                               {savingStatus ? "Saving..." : "Update"}
                             </Button>
                           </div>
                           {blocked && (
-                            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2.5 py-1.5">
+                            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                               Assign a delivery partner above before marking as Out for Delivery or Delivered.
                             </p>
                           )}
@@ -3848,14 +3812,16 @@ export default function Orders() {
                       );
                     })()}
                   </div>
-                </section>
+                </div>
+
               </div>
 
-              <SheetFooter className="px-6 py-4 bg-white border-t border-gray-200 flex-row sm:justify-end gap-2">
+              {/* ── Footer ── */}
+              <SheetFooter className="px-6 py-4 bg-white border-t border-gray-100 flex-row sm:justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => { setSelectedOrder(null); setShowAllPersons(false); }}
-                  className="h-9 px-5"
+                  className="h-9 px-6 rounded-xl border-gray-200 text-black font-semibold hover:bg-gray-50"
                 >
                   Close
                 </Button>
