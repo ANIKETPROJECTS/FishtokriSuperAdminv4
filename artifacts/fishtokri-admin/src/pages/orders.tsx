@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   Search, X, RefreshCw, ClipboardList, Clock, CheckCircle2, XCircle,
   Truck, Package, ChevronLeft, ChevronRight, Eye, MapPin,
-  Phone, User, SlidersHorizontal, ArrowUpDown, UserCheck,
+  Phone, User, UserPlus, SlidersHorizontal, ArrowUpDown, UserCheck,
   ShoppingBag, Building2, AlertCircle, ChevronDown, Check,
   Pencil, Trash2, Plus, Store, Home, Trash, Mail, Calendar, Tag, Ticket, Zap,
   Wallet, CreditCard, Banknote, Smartphone, Landmark, FileText, Printer, MoreVertical,
@@ -2600,70 +2600,80 @@ export default function Orders() {
             {/* ─── TOP: Customer + Address + Schedule (compact, scrollable, capped at 240px) ─── */}
             <div className="flex-shrink-0 overflow-y-auto border-b border-gray-200" style={{ maxHeight: "240px" }}>
 
-              {/* Customer */}
+              {/* Customer — phone-search UX */}
               <div className="px-4 pt-3 pb-3 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-bold text-[#162B4D] uppercase tracking-widest">Customer</p>
-                  <div className="flex items-center gap-0.5 bg-gray-100 rounded-full p-0.5">
-                    <button onClick={() => { setCustomerMode("existing"); setChosenCustomer(null); }} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${customerMode === "existing" ? "bg-[#1A56DB] text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Existing</button>
-                    <button onClick={() => { setCustomerMode("new"); setChosenCustomer(null); }} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${customerMode === "new" ? "bg-[#1A56DB] text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>New</button>
+                <p className="text-xs font-bold text-[#162B4D] uppercase tracking-widest mb-2">Customer</p>
+
+                {/* ── State A: customer already selected ── */}
+                {chosenCustomer ? (
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50">
+                    <div className="w-8 h-8 rounded-full bg-[#162B4D] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{chosenCustomer.name?.charAt(0).toUpperCase() || "?"}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#162B4D] truncate">{chosenCustomer.name}</p>
+                      <p className="text-xs text-gray-400">{chosenCustomer.phone}</p>
+                    </div>
+                    <button onClick={() => { setChosenCustomer(null); setSelectedAddressIdx(null); setCustomerSearch(""); setNewCustomer({ name: "", phone: "", email: "", dateOfBirth: "" }); }} className="text-gray-300 hover:text-red-400 flex-shrink-0 p-0.5"><X className="w-3.5 h-3.5" /></button>
                   </div>
-                </div>
-                {customerMode === "existing" ? (
-                  <Popover open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
-                    <PopoverTrigger asChild>
-                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-left hover:border-[#1A56DB]/50 hover:bg-white transition-all">
-                        {chosenCustomer ? (
-                          <>
-                            <div className="w-8 h-8 rounded-full bg-[#162B4D] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{chosenCustomer.name?.charAt(0).toUpperCase() || "?"}</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-[#162B4D] truncate">{chosenCustomer.name}</p>
-                              <p className="text-xs text-gray-400">{chosenCustomer.phone}</p>
-                            </div>
-                            <button onClick={(e) => { e.stopPropagation(); setChosenCustomer(null); setSelectedAddressIdx(null); }} className="text-gray-300 hover:text-red-400 flex-shrink-0 p-0.5"><X className="w-3.5 h-3.5" /></button>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"><User className="w-4 h-4 text-gray-400" /></div>
-                            <span className="text-sm text-gray-400 flex-1">{loadingCustomers ? "Loading..." : "Search customer..."}</span>
-                            <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          </>
+
+                ) : (() => {
+                  const digits = customerSearch.replace(/\D/g, "").slice(0, 10);
+                  const phoneMatches = allCustomers.filter((c: any) => (c.phone || "").replace(/\D/g, "").includes(digits) && digits.length > 0);
+                  const isComplete = digits.length === 10;
+                  const noMatch = isComplete && phoneMatches.length === 0;
+
+                  return (
+                    <>
+                      {/* Phone input */}
+                      <div className="relative">
+                        <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <Input
+                          value={customerSearch}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                            setCustomerSearch(val);
+                            setNewCustomer((n) => ({ ...n, phone: val }));
+                          }}
+                          placeholder="Enter customer phone number"
+                          className="pl-8 h-8 text-sm"
+                          inputMode="numeric"
+                          maxLength={10}
+                        />
+                        {customerSearch.length > 0 && (
+                          <button onClick={() => { setCustomerSearch(""); setNewCustomer({ name: "", phone: "", email: "", dateOfBirth: "" }); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><X className="w-3.5 h-3.5" /></button>
                         )}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 shadow-xl border border-gray-100 rounded-xl overflow-hidden w-80" align="start" sideOffset={4}>
-                      <div className="p-2 border-b border-gray-100 bg-gray-50">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <Input autoFocus value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Name, phone or email..." className="pl-8 h-8 text-sm" />
+                      </div>
+
+                      {/* Matching existing customers */}
+                      {!noMatch && phoneMatches.length > 0 && (
+                        <div className="mt-1.5 border border-gray-200 rounded-lg overflow-hidden">
+                          {phoneMatches.slice(0, 4).map((c: any) => (
+                            <button key={c.id} type="button"
+                              onClick={() => { setChosenCustomer(c); const addrs = Array.isArray(c.addresses) ? c.addresses : []; const defaultIdx = addrs.findIndex((a: any) => getAddressFields(a)?.isDefault); setSelectedAddressIdx(addrs.length ? (defaultIdx >= 0 ? defaultIdx : 0) : null); setOrderAddressMode(addrs.length ? "saved" : "new"); setCustomerSearch(""); if (!newAddress.name) setNewAddress((a) => ({ ...a, name: c.name || "", phone: c.phone || "" })); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                            >
+                              <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">{c.name?.charAt(0).toUpperCase() || "?"}</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-[#162B4D] truncate">{c.name}</p>
+                                <p className="text-xs text-gray-400">{c.phone}</p>
+                              </div>
+                              <Check className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                            </button>
+                          ))}
                         </div>
-                      </div>
-                      <div className="max-h-52 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
-                        {filteredCustomers.length === 0 ? (
-                          <div className="p-4 text-center">
-                            <p className="text-sm text-gray-400">No customer found</p>
-                            <button onClick={() => { setCustomerMode("new"); setNewCustomer((n) => ({ ...n, name: customerSearch.trim() })); setCustomerDropdownOpen(false); }} className="text-sm text-[#1A56DB] font-semibold mt-1.5 hover:underline">+ Create new</button>
-                          </div>
-                        ) : filteredCustomers.map((c) => (
-                          <button key={c.id} onClick={() => { setChosenCustomer(c); const addrs = Array.isArray(c.addresses) ? c.addresses : []; const defaultIdx = addrs.findIndex((a: any) => getAddressFields(a)?.isDefault); setSelectedAddressIdx(addrs.length ? (defaultIdx >= 0 ? defaultIdx : 0) : null); setOrderAddressMode(addrs.length ? "saved" : "new"); setCustomerDropdownOpen(false); setCustomerSearch(""); if (!newAddress.name) setNewAddress((a) => ({ ...a, name: c.name || "", phone: c.phone || "" })); }} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-blue-50 transition-colors text-left">
-                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0">{c.name?.charAt(0).toUpperCase() || "?"}</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-[#162B4D]">{c.name}</p>
-                              <p className="text-xs text-gray-400">{c.phone}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input value={newCustomer.name} onChange={(e) => setNewCustomer((n) => ({ ...n, name: e.target.value }))} placeholder="Full name *" className="h-8 text-sm col-span-2" />
-                    <Input value={newCustomer.phone} onChange={(e) => setNewCustomer((n) => ({ ...n, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} placeholder="Phone *" className="h-8 text-sm" inputMode="numeric" maxLength={10} />
-                    <Input value={newCustomer.email} onChange={(e) => setNewCustomer((n) => ({ ...n, email: e.target.value }))} placeholder="Email (optional)" className="h-8 text-sm" type="email" />
-                    <Input value={newCustomer.dateOfBirth} onChange={(e) => setNewCustomer((n) => ({ ...n, dateOfBirth: e.target.value }))} placeholder="Date of birth" className="h-8 text-sm col-span-2" type="date" />
-                  </div>
-                )}
+                      )}
+
+                      {/* New customer form — appears automatically when 10 digits entered and no match */}
+                      {noMatch && (
+                        <div className="mt-2 space-y-1.5">
+                          <p className="text-xs font-semibold text-[#1A56DB] flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" />New customer — fill in details</p>
+                          <Input value={newCustomer.name} onChange={(e) => setNewCustomer((n) => ({ ...n, name: e.target.value }))} placeholder="Full name *" className="h-8 text-sm" />
+                          <Input value={newCustomer.email} onChange={(e) => setNewCustomer((n) => ({ ...n, email: e.target.value }))} placeholder="Email (optional)" className="h-8 text-sm" type="email" />
+                          <Input value={newCustomer.dateOfBirth} onChange={(e) => setNewCustomer((n) => ({ ...n, dateOfBirth: e.target.value }))} placeholder="Date of birth (optional)" className="h-8 text-sm" type="date" />
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Delivery Address */}
