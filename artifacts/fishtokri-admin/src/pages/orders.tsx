@@ -2364,1094 +2364,507 @@ export default function Orders() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Order Page */}
+      {/* Create Order Page — POS Layout */}
       {isCreatePage && (
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div className="bg-white border-b border-gray-200">
-          <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { if (!creatingSaving) { setLocation("/orders"); resetCreateForm(); } }}
-                disabled={creatingSaving}
-                className="h-8 w-8 p-0"
-                aria-label="Back to orders"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div>
-                <h1 className="text-lg font-bold text-[#162B4D] flex items-center gap-2">
-                  {editingOrderId ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                  {editingOrderId ? "Edit Order" : "Create New Order"}
-                </h1>
-                <p className="text-[11px] text-gray-400">{editingOrderId ? "Update any details and save changes" : "Fill in the details and create the order"}</p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { if (!creatingSaving) { setLocation("/orders"); resetCreateForm(); } }}
-              disabled={creatingSaving}
-              className="h-8 w-8 p-0"
-              aria-label="Close"
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col" style={{ height: "calc(100vh - 100px)" }}>
+        {/* ── TOP HEADER BAR ── */}
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white flex-shrink-0">
+          <Button
+            variant="ghost" size="sm"
+            onClick={() => { if (!creatingSaving) { setLocation("/orders"); resetCreateForm(); } }}
+            disabled={creatingSaving}
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex-shrink-0">
+            <h1 className="text-sm font-bold text-[#162B4D]">{editingOrderId ? "Edit Order" : "New Order"}</h1>
+          </div>
+          <div className="flex items-center gap-2 flex-1">
+            <Select value={selectedSuperHubId} onValueChange={setSelectedSuperHubId} disabled={loadingSuperHubs}>
+              <SelectTrigger className="h-8 text-xs w-40">
+                <SelectValue placeholder={loadingSuperHubs ? "Loading..." : "Super Hub"} />
+              </SelectTrigger>
+              <SelectContent>
+                {superHubs.map((h) => (
+                  <SelectItem key={h.id} value={h.id}><span className="text-xs">{h.name}</span></SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+            <Select value={selectedSubHubId} onValueChange={setSelectedSubHubId} disabled={!selectedSuperHubId || loadingSubHubs}>
+              <SelectTrigger className="h-8 text-xs w-40">
+                <SelectValue placeholder={!selectedSuperHubId ? "Pick super hub" : loadingSubHubs ? "Loading..." : "Sub Hub"} />
+              </SelectTrigger>
+              <SelectContent>
+                {subHubs.map((h) => (
+                  <SelectItem key={h.id} value={h.id}><span className="text-xs">{h.name}</span></SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Order type toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 flex-shrink-0">
+            <button
+              onClick={() => setOrderDeliveryType("delivery")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${orderDeliveryType === "delivery" ? "bg-white text-[#1A56DB] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
             >
-              <X className="w-4 h-4" />
-            </Button>
+              <Truck className="w-3.5 h-3.5" /> Delivery
+            </button>
+            <button
+              onClick={() => setOrderDeliveryType("takeaway")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${orderDeliveryType === "takeaway" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              <Store className="w-3.5 h-3.5" /> Takeaway
+            </button>
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 py-5">
-          <div className="space-y-5 pt-1">
-            {/* HUB SELECTION (must be picked first) */}
-            <div className="space-y-2 p-3 rounded-2xl border border-blue-100 bg-blue-50/40">
-              <p className="text-[10px] font-bold text-[#1A56DB] uppercase tracking-widest">Step 1 · Fulfillment Hub *</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold text-gray-500">Super Hub</Label>
-                  <Select value={selectedSuperHubId} onValueChange={setSelectedSuperHubId} disabled={loadingSuperHubs}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder={loadingSuperHubs ? "Loading..." : "Select super hub"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {superHubs.length === 0 ? (
-                        <div className="p-2 text-xs text-gray-400 text-center">No super hubs found</div>
-                      ) : superHubs.map((h) => (
-                        <SelectItem key={h.id} value={h.id}>
-                          <span className="flex items-center gap-1.5">
-                            <Building2 className="w-3 h-3 text-gray-400" />
-                            {h.name}
-                            {h.location && <span className="text-[10px] text-gray-400">· {h.location}</span>}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold text-gray-500">Sub Hub</Label>
-                  <Select value={selectedSubHubId} onValueChange={setSelectedSubHubId} disabled={!selectedSuperHubId || loadingSubHubs}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder={
-                        !selectedSuperHubId ? "Select super hub first" :
-                        loadingSubHubs ? "Loading..." :
-                        subHubs.length === 0 ? "No sub-hubs" : "Select sub hub"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subHubs.map((h) => (
-                        <SelectItem key={h.id} value={h.id}>
-                          <span className="flex items-center gap-1.5">
-                            <Building2 className="w-3 h-3 text-gray-400" />
-                            {h.name}
-                            {h.location && <span className="text-[10px] text-gray-400">· {h.location}</span>}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {selectedSubHubId && (
-                <p className="text-[11px] text-gray-500 inline-flex items-center gap-1">
-                  <ShoppingBag className="w-3 h-3" /> {loadingProducts ? "Loading catalog..." : `${subHubProducts.length} products available in this sub-hub`}
-                </p>
+        {/* ── MAIN BODY — 3 columns ── */}
+        <div className="flex flex-1 min-h-0">
+
+        {/* ══ LEFT: CATEGORIES ══ */}
+        <div className="w-44 flex-shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col overflow-hidden">
+          <div className="px-3 py-2.5 border-b border-gray-100 bg-white flex-shrink-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categories</p>
+          </div>
+          <div className="flex-1 overflow-y-auto py-1">
+            <button
+              onClick={() => setPickerCategory(null)}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors text-left ${!pickerCategory ? "bg-[#1A56DB] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">All Items</span>
+              <span className={`ml-auto text-[10px] font-bold flex-shrink-0 ${!pickerCategory ? "text-white/70" : "text-gray-400"}`}>{subHubProducts.length}</span>
+            </button>
+            {loadingProducts ? (
+              <div className="px-3 py-4 text-[11px] text-gray-400 text-center">Loading...</div>
+            ) : productCategories.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => setPickerCategory(cat.name)}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors text-left ${pickerCategory === cat.name ? "bg-[#1A56DB] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              >
+                <Package className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate capitalize">{cat.name}</span>
+                <span className={`ml-auto text-[10px] font-bold flex-shrink-0 ${pickerCategory === cat.name ? "text-white/70" : "text-gray-400"}`}>{cat.count}</span>
+              </button>
+            ))}
+            {!loadingProducts && productCategories.length === 0 && selectedSubHubId && (
+              <p className="px-3 py-3 text-[11px] text-gray-400 text-center">No products</p>
+            )}
+            {!selectedSubHubId && (
+              <p className="px-3 py-3 text-[11px] text-gray-400 text-center">Select a hub first</p>
+            )}
+          </div>
+        </div>
+
+        {/* ══ CENTER: PRODUCTS GRID ══ */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Search bar */}
+          <div className="px-3 py-2.5 border-b border-gray-100 bg-white flex-shrink-0 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <Input
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder={pickerCategory ? `Search in ${pickerCategory}...` : "Search menu items..."}
+                className="pl-8 h-8 text-xs"
+              />
+              {productSearch && (
+                <button onClick={() => setProductSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
+            <span className="text-[11px] text-gray-400 flex-shrink-0 whitespace-nowrap">
+              {filteredProducts.length} item{filteredProducts.length !== 1 ? "s" : ""}
+              {pickerCategory ? ` in ${pickerCategory}` : " available"}
+            </span>
+          </div>
 
-            {/* CUSTOMER SECTION */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer</p>
-                <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-                  <button
-                    onClick={() => { setCustomerMode("existing"); setChosenCustomer(null); }}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${customerMode === "existing" ? "bg-white text-[#1A56DB] shadow-sm" : "text-gray-500"}`}
-                  >Existing</button>
-                  <button
-                    onClick={() => { setCustomerMode("new"); setChosenCustomer(null); }}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${customerMode === "new" ? "bg-white text-[#1A56DB] shadow-sm" : "text-gray-500"}`}
-                  >New Customer</button>
+          {/* Products grid */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {!selectedSubHubId ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                  <Building2 className="w-5 h-5 text-[#1A56DB]" />
                 </div>
+                <p className="text-sm font-semibold text-gray-600">Select a hub to load products</p>
+                <p className="text-xs text-gray-400 mt-1">Use the dropdowns in the header above</p>
               </div>
-
-              {customerMode === "existing" ? (
-                <div className="space-y-2">
-                  <Popover open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors text-left"
-                      >
-                        {chosenCustomer ? (
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-8 h-8 rounded-full bg-[#1A56DB] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                              {chosenCustomer.name?.charAt(0).toUpperCase() || "?"}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-[#162B4D] text-sm truncate">{chosenCustomer.name || "(No name)"}</p>
-                              <p className="text-[11px] text-gray-400 truncate">
-                                {chosenCustomer.phone || chosenCustomer.email || "—"}
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400 flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            {loadingCustomers ? "Loading customers..." : `Select a customer (${allCustomers.length} available)`}
-                          </span>
-                        )}
-                        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${customerDropdownOpen ? "rotate-180" : ""}`} />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="p-0 shadow-xl border border-gray-100 rounded-2xl overflow-hidden"
-                      align="start"
-                      sideOffset={6}
-                      style={{ width: "var(--radix-popover-trigger-width)", maxHeight: "min(420px, var(--radix-popover-content-available-height))" }}
+            ) : loadingProducts ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 rounded-xl" />
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-center">
+                <Package className="w-8 h-8 text-gray-200 mb-2" />
+                <p className="text-sm text-gray-400">No products found</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {filteredProducts.map((p) => {
+                  const pid = String(p._id);
+                  const cartItem = selectedProducts.find((sp) => sp.productId === pid);
+                  const stock = Number(p.quantity) || 0;
+                  const outOfStock = stock <= 0;
+                  const atMax = cartItem ? cartItem.quantity >= stock : false;
+                  return (
+                    <div
+                      key={pid}
+                      className={`relative rounded-xl border transition-all select-none ${
+                        outOfStock ? "border-gray-100 bg-gray-50 opacity-50" :
+                        cartItem ? "border-[#1A56DB] bg-blue-50/50 shadow-sm" :
+                        "border-gray-200 bg-white hover:border-[#1A56DB]/50 hover:shadow-sm cursor-pointer"
+                      }`}
+                      onClick={() => {
+                        if (outOfStock) { toast({ title: "Out of stock", description: `${p.name} is unavailable.`, variant: "destructive" }); return; }
+                        if (atMax) { toast({ title: "Stock limit reached", description: `Only ${stock} available.`, variant: "destructive" }); return; }
+                        setSelectedProducts((prev) => {
+                          const exists = prev.find((sp) => sp.productId === pid);
+                          if (exists) return prev.map((sp) => sp.productId === pid ? { ...sp, quantity: sp.quantity + 1 } : sp);
+                          return [...prev, { productId: pid, name: p.name, price: Number(p.price) || 0, unit: p.unit ?? "", quantity: 1 }];
+                        });
+                      }}
                     >
-                      <div className="p-2 border-b border-gray-100 bg-gray-50/80">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                          <Input
-                            autoFocus
-                            value={customerSearch}
-                            onChange={(e) => setCustomerSearch(e.target.value)}
-                            placeholder="Search name, phone or email..."
-                            className="pl-7 h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div
-                        className="max-h-[320px] overflow-y-auto overscroll-contain py-1"
-                        onWheel={(e) => e.stopPropagation()}
-                        onTouchMove={(e) => e.stopPropagation()}
-                      >
-                        {loadingCustomers ? (
-                          <p className="p-4 text-xs text-gray-400 text-center">Loading...</p>
-                        ) : filteredCustomers.length === 0 ? (
-                          <div className="p-4 text-center">
-                            <p className="text-xs text-gray-400">No customers match.</p>
-                            <button
-                              onClick={() => {
-                                setCustomerMode("new");
-                                setNewCustomer((n) => ({ ...n, name: customerSearch.trim() }));
-                                setCustomerDropdownOpen(false);
-                              }}
-                              className="mt-1 text-xs text-[#1A56DB] font-semibold hover:underline"
-                            >
-                              + Create new customer
-                            </button>
-                          </div>
+                      {/* Item image or icon */}
+                      <div className="w-full aspect-square rounded-t-xl overflow-hidden bg-gray-100">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                         ) : (
-                          filteredCustomers.map((c) => {
-                            const isSelected = chosenCustomer?.id === c.id;
-                            return (
-                              <button
-                                key={c.id}
-                                onClick={() => {
-                                  setChosenCustomer(c);
-                                  const addrs = Array.isArray(c.addresses) ? c.addresses : [];
-                                  const defaultIdx = addrs.findIndex((a: any) => getAddressFields(a)?.isDefault);
-                                  setSelectedAddressIdx(addrs.length ? (defaultIdx >= 0 ? defaultIdx : 0) : null);
-                                  setOrderAddressMode(addrs.length ? "saved" : "new");
-                                  setCustomerDropdownOpen(false);
-                                  setCustomerSearch("");
-                                }}
-                                className={`w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left ${isSelected ? "bg-blue-50/60" : ""}`}
-                              >
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${isSelected ? "bg-[#1A56DB] text-white" : "bg-[#162B4D]/10 text-[#162B4D]"}`}>
-                                  {c.name?.charAt(0).toUpperCase() || "?"}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-semibold truncate ${isSelected ? "text-[#1A56DB]" : "text-[#162B4D]"}`}>
-                                    {c.name || "(No name)"}
-                                  </p>
-                                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                                    {c.phone && <span className="inline-flex items-center gap-0.5"><Phone className="w-2.5 h-2.5" />{c.phone}</span>}
-                                    {c.email && <span className="inline-flex items-center gap-0.5 truncate"><Mail className="w-2.5 h-2.5" />{c.email}</span>}
-                                  </div>
-                                  {Array.isArray(c.addresses) && c.addresses.length > 0 && (
-                                    <p className="text-[10px] text-emerald-600 mt-0.5 inline-flex items-center gap-0.5">
-                                      <Home className="w-2.5 h-2.5" /> {c.addresses.length} saved address{c.addresses.length > 1 ? "es" : ""}
-                                    </p>
-                                  )}
-                                </div>
-                                {isSelected && <Check className="w-4 h-4 text-[#1A56DB] flex-shrink-0" />}
-                              </button>
-                            );
-                          })
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-6 h-6 text-gray-300" />
+                          </div>
                         )}
                       </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {chosenCustomer && (
-                    <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold text-[#1A56DB] uppercase tracking-widest">Customer Details</p>
-                        <button onClick={() => { setChosenCustomer(null); setSelectedAddressIdx(null); }} className="text-gray-400 hover:text-red-500">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="p-2">
+                        <p className="text-[11px] font-semibold text-gray-700 leading-tight line-clamp-2">{p.name}</p>
+                        {p.category && <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-0.5 truncate">{p.category}</p>}
+                        <p className="text-xs font-bold text-[#1A56DB] mt-1">₹{Number(p.price).toLocaleString("en-IN")}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                        <div className="flex items-center gap-1 text-gray-600"><User className="w-3 h-3 text-gray-400" /> {chosenCustomer.name || "—"}</div>
-                        <div className="flex items-center gap-1 text-gray-600"><Phone className="w-3 h-3 text-gray-400" /> {chosenCustomer.phone || "—"}</div>
-                        <div className="flex items-center gap-1 text-gray-600 col-span-2 truncate"><Mail className="w-3 h-3 text-gray-400" /> {chosenCustomer.email || "—"}</div>
-                        {chosenCustomer.dateOfBirth && (
-                          <div className="flex items-center gap-1 text-gray-600 col-span-2"><span className="text-gray-400">DOB:</span> {chosenCustomer.dateOfBirth}</div>
-                        )}
-                      </div>
+                      {/* Cart qty badge / add button */}
+                      {cartItem ? (
+                        <div
+                          className="absolute bottom-2 right-2 flex items-center gap-1 bg-[#1A56DB] rounded-lg overflow-hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            className="w-6 h-6 flex items-center justify-center text-white hover:bg-[#1447B4] text-sm font-bold"
+                            onClick={(e) => { e.stopPropagation(); setSelectedProducts((arr) => cartItem.quantity <= 1 ? arr.filter((x) => x.productId !== pid) : arr.map((x) => x.productId === pid ? { ...x, quantity: x.quantity - 1 } : x)); }}
+                          >−</button>
+                          <span className="text-[11px] font-bold text-white min-w-[14px] text-center">{cartItem.quantity}</span>
+                          <button
+                            className="w-6 h-6 flex items-center justify-center text-white hover:bg-[#1447B4] text-sm font-bold disabled:opacity-40"
+                            disabled={atMax}
+                            onClick={(e) => { e.stopPropagation(); if (!atMax) setSelectedProducts((arr) => arr.map((x) => x.productId === pid ? { ...x, quantity: x.quantity + 1 } : x)); }}
+                          >+</button>
+                        </div>
+                      ) : !outOfStock && (
+                        <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#1A56DB] flex items-center justify-center shadow-sm">
+                          <Plus className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      )}
+                      {outOfStock && (
+                        <div className="absolute inset-0 flex items-end justify-center pb-2 rounded-xl">
+                          <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-full">Out of stock</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-500">Full name *</Label>
-                    <Input value={newCustomer.name} onChange={(e) => setNewCustomer((n) => ({ ...n, name: e.target.value }))} className="h-9 text-sm" placeholder="Full name" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-500">Phone *</Label>
-                    <Input
-                      value={newCustomer.phone}
-                      onChange={(e) => setNewCustomer((n) => ({ ...n, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                      className="h-9 text-sm"
-                      placeholder="10-digit number"
-                      inputMode="numeric"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-500">Email</Label>
-                    <Input value={newCustomer.email} onChange={(e) => setNewCustomer((n) => ({ ...n, email: e.target.value }))} className="h-9 text-sm" placeholder="email@example.com" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-500">Date of birth</Label>
-                    <Input
-                      type="date"
-                      value={newCustomer.dateOfBirth}
-                      onChange={(e) => setNewCustomer((n) => ({ ...n, dateOfBirth: e.target.value }))}
-                      max={new Date().toISOString().slice(0, 10)}
-                      className="h-9 text-sm"
-                    />
-                  </div>
-                  <p className="col-span-2 text-[11px] text-gray-400">Customer will be saved automatically. The delivery address you enter below becomes their first saved address.</p>
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
 
-            {/* DELIVERY TYPE */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order Type</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setOrderDeliveryType("delivery")}
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${orderDeliveryType === "delivery" ? "border-[#1A56DB] bg-blue-50" : "border-gray-100 bg-white hover:border-gray-200"}`}
-                >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${orderDeliveryType === "delivery" ? "bg-[#1A56DB] text-white" : "bg-gray-100 text-gray-400"}`}>
-                    <Truck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-[#162B4D]">Delivery</p>
-                    <p className="text-[11px] text-gray-400">Send to customer's address</p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setOrderDeliveryType("takeaway")}
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${orderDeliveryType === "takeaway" ? "border-emerald-500 bg-emerald-50" : "border-gray-100 bg-white hover:border-gray-200"}`}
-                >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${orderDeliveryType === "takeaway" ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-400"}`}>
-                    <Store className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-[#162B4D]">Takeaway</p>
-                    <p className="text-[11px] text-gray-400">Customer picks up at store</p>
-                  </div>
-                </button>
+        {/* ══ RIGHT: CART + CHECKOUT ══ */}
+        <div className="w-72 xl:w-80 flex-shrink-0 border-l border-gray-100 bg-white flex flex-col overflow-hidden">
+
+          {/* ── Customer ── */}
+          <div className="flex-shrink-0 border-b border-gray-100 px-3 py-2.5 bg-gray-50">
+            <div className="flex items-center gap-1.5 mb-2">
+              <div className="flex items-center gap-1 bg-white rounded-md border border-gray-200 p-0.5">
+                <button onClick={() => { setCustomerMode("existing"); setChosenCustomer(null); }} className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${customerMode === "existing" ? "bg-[#1A56DB] text-white" : "text-gray-500"}`}>Existing</button>
+                <button onClick={() => { setCustomerMode("new"); setChosenCustomer(null); }} className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${customerMode === "new" ? "bg-[#1A56DB] text-white" : "text-gray-500"}`}>New</button>
               </div>
             </div>
-
-            {/* ADDRESS (only for delivery) */}
-            {orderDeliveryType === "delivery" && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Delivery Address</p>
-                  {chosenCustomer && Array.isArray(chosenCustomer.addresses) && chosenCustomer.addresses.length > 0 && (
-                    <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-                      <button
-                        onClick={() => setOrderAddressMode("saved")}
-                        className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-md ${orderAddressMode === "saved" ? "bg-white text-[#1A56DB] shadow-sm" : "text-gray-500"}`}
-                      >Saved</button>
-                      <button
-                        onClick={() => setOrderAddressMode("new")}
-                        className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-md ${orderAddressMode === "new" ? "bg-white text-[#1A56DB] shadow-sm" : "text-gray-500"}`}
-                      >New</button>
+            {customerMode === "existing" ? (
+              <Popover open={customerDropdownOpen} onOpenChange={setCustomerDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <button type="button" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-left hover:border-gray-300 transition-colors">
+                    {chosenCustomer ? (
+                      <>
+                        <div className="w-6 h-6 rounded-full bg-[#1A56DB] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">{chosenCustomer.name?.charAt(0).toUpperCase() || "?"}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#162B4D] truncate">{chosenCustomer.name}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{chosenCustomer.phone}</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setChosenCustomer(null); setSelectedAddressIdx(null); }} className="text-gray-300 hover:text-red-400 flex-shrink-0"><X className="w-3 h-3" /></button>
+                      </>
+                    ) : (
+                      <>
+                        <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-400 flex-1">{loadingCustomers ? "Loading..." : "Search customer..."}</span>
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      </>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 shadow-xl border border-gray-100 rounded-xl overflow-hidden w-64" align="start" sideOffset={4}>
+                  <div className="p-2 border-b border-gray-100 bg-gray-50">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <Input autoFocus value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Name, phone or email..." className="pl-7 h-7 text-xs" />
                     </div>
-                  )}
+                  </div>
+                  <div className="max-h-48 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+                    {filteredCustomers.length === 0 ? (
+                      <div className="p-3 text-center">
+                        <p className="text-xs text-gray-400">No match</p>
+                        <button onClick={() => { setCustomerMode("new"); setNewCustomer((n) => ({ ...n, name: customerSearch.trim() })); setCustomerDropdownOpen(false); }} className="text-xs text-[#1A56DB] font-semibold mt-1 hover:underline">+ New customer</button>
+                      </div>
+                    ) : filteredCustomers.map((c) => (
+                      <button key={c.id} onClick={() => { setChosenCustomer(c); const addrs = Array.isArray(c.addresses) ? c.addresses : []; const defaultIdx = addrs.findIndex((a: any) => getAddressFields(a)?.isDefault); setSelectedAddressIdx(addrs.length ? (defaultIdx >= 0 ? defaultIdx : 0) : null); setOrderAddressMode(addrs.length ? "saved" : "new"); setCustomerDropdownOpen(false); setCustomerSearch(""); if (!newAddress.name) setNewAddress((a) => ({ ...a, name: c.name || "", phone: c.phone || "" })); }} className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-blue-50 transition-colors text-left">
+                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-600 flex-shrink-0">{c.name?.charAt(0).toUpperCase() || "?"}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#162B4D] truncate">{c.name}</p>
+                          <p className="text-[10px] text-gray-400">{c.phone}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex gap-1.5">
+                  <Input value={newCustomer.name} onChange={(e) => setNewCustomer((n) => ({ ...n, name: e.target.value }))} placeholder="Full name *" className="h-8 text-xs flex-1" />
+                  <Input value={newCustomer.phone} onChange={(e) => setNewCustomer((n) => ({ ...n, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} placeholder="Phone *" className="h-8 text-xs w-28" inputMode="numeric" maxLength={10} />
                 </div>
+              </div>
+            )}
+
+            {/* Address (delivery only) */}
+            {orderDeliveryType === "delivery" && (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase">Delivery Address</p>
+                {chosenCustomer && Array.isArray(chosenCustomer.addresses) && chosenCustomer.addresses.length > 0 && (
+                  <div className="flex items-center gap-1 mb-1">
+                    <button onClick={() => setOrderAddressMode("saved")} className={`px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${orderAddressMode === "saved" ? "bg-[#1A56DB] text-white border-[#1A56DB]" : "border-gray-200 text-gray-500 bg-white"}`}>Saved</button>
+                    <button onClick={() => setOrderAddressMode("new")} className={`px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${orderAddressMode === "new" ? "bg-[#1A56DB] text-white border-[#1A56DB]" : "border-gray-200 text-gray-500 bg-white"}`}>New</button>
+                  </div>
+                )}
                 {chosenCustomer && orderAddressMode === "saved" && Array.isArray(chosenCustomer.addresses) && chosenCustomer.addresses.length > 0 ? (
-                  <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+                  <div className="space-y-1 max-h-28 overflow-y-auto">
                     {chosenCustomer.addresses.map((a: any, i: number) => {
                       const f = getAddressFields(a);
                       const lines = formatAddressLines(a);
-                      const isSelected = selectedAddressIdx === i;
                       return (
-                        <button
-                          key={i}
-                          onClick={() => setSelectedAddressIdx(i)}
-                          className={`w-full flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all ${isSelected ? "border-[#1A56DB] bg-blue-50" : "border-gray-100 bg-white hover:border-gray-200"}`}
-                        >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-[#1A56DB] text-white" : "bg-gray-100 text-gray-400"}`}>
-                            <Home className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="flex-1 min-w-0 space-y-0.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="text-xs font-bold text-[#162B4D]">{f?.label || `Address ${i + 1}`}</p>
-                              {f?.isDefault && <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">DEFAULT</span>}
-                              {f?.contactName && <span className="text-[10px] text-gray-500">· {f.contactName}</span>}
-                              {f?.phone && <span className="text-[10px] text-gray-400 inline-flex items-center gap-0.5"><Phone className="w-2.5 h-2.5" />{f.phone}</span>}
-                            </div>
-                            {lines.length > 0 ? (
-                              lines.map((ln, li) => (
-                                <p key={li} className="text-[11.5px] text-gray-600 leading-tight">{ln}</p>
-                              ))
-                            ) : (
-                              <p className="text-[11px] text-gray-400 italic">No address details</p>
-                            )}
-                            {f?.instructions && <p className="text-[10px] text-amber-700 italic mt-0.5">Note: {f.instructions}</p>}
-                          </div>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-[#1A56DB] flex-shrink-0 mt-1" />}
+                        <button key={i} onClick={() => setSelectedAddressIdx(i)} className={`w-full text-left px-2 py-1.5 rounded-lg border text-[11px] transition-all ${selectedAddressIdx === i ? "border-[#1A56DB] bg-blue-50 text-[#162B4D]" : "border-gray-100 bg-white text-gray-600 hover:border-gray-200"}`}>
+                          <span className="font-semibold">{f?.label || `Address ${i + 1}`}</span>
+                          <span className="block text-[10px] text-gray-400 truncate">{lines.slice(0, 2).join(", ")}</span>
                         </button>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="space-y-3 p-3 bg-gray-50/60 border border-gray-100 rounded-xl">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Full Name *</Label>
-                        <Input value={newAddress.name} onChange={(e) => setNewAddress((a) => ({ ...a, name: e.target.value }))} placeholder="Recipient name" className="h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Phone *</Label>
-                        <Input
-                          value={newAddress.phone}
-                          onChange={(e) => setNewAddress((a) => ({ ...a, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                          placeholder="10-digit mobile"
-                          className="h-9 text-sm"
-                          inputMode="numeric"
-                          maxLength={10}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Building / Flat No *</Label>
-                        <Input value={newAddress.building} onChange={(e) => setNewAddress((a) => ({ ...a, building: e.target.value }))} placeholder="Wing A, Flat 302, Building Name" className="h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Street / Locality</Label>
-                        <Input value={newAddress.street} onChange={(e) => setNewAddress((a) => ({ ...a, street: e.target.value }))} placeholder="Street name or society" className="h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Area / Suburb *</Label>
-                        <Input value={newAddress.area} onChange={(e) => setNewAddress((a) => ({ ...a, area: e.target.value }))} placeholder="e.g. Thane West" className="h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Pincode *</Label>
-                        <Input
-                          value={newAddress.pincode}
-                          onChange={(e) => setNewAddress((a) => ({ ...a, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
-                          placeholder="6-digit pincode"
-                          className="h-9 text-sm"
-                          inputMode="numeric"
-                          maxLength={6}
-                        />
-                      </div>
-                      <div className="col-span-2 space-y-1.5">
-                        <Label className="text-xs font-semibold text-gray-500">Address Type</Label>
-                        <Select value={newAddress.label || "Home"} onValueChange={(v) => setNewAddress((a) => ({ ...a, label: v }))}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Home">Home</SelectItem>
-                            <SelectItem value="Work">Work</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Input value={newAddress.name} onChange={(e) => setNewAddress((a) => ({ ...a, name: e.target.value }))} placeholder="Recipient name *" className="h-7 text-xs col-span-2" />
+                    <Input value={newAddress.phone} onChange={(e) => setNewAddress((a) => ({ ...a, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} placeholder="Phone *" className="h-7 text-xs col-span-2" inputMode="numeric" />
+                    <Input value={newAddress.building} onChange={(e) => setNewAddress((a) => ({ ...a, building: e.target.value }))} placeholder="Building/Flat *" className="h-7 text-xs col-span-2" />
+                    <Input value={newAddress.area} onChange={(e) => setNewAddress((a) => ({ ...a, area: e.target.value }))} placeholder="Area *" className="h-7 text-xs" />
+                    <Input value={newAddress.pincode} onChange={(e) => setNewAddress((a) => ({ ...a, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))} placeholder="Pincode *" className="h-7 text-xs" inputMode="numeric" />
                   </div>
                 )}
               </div>
             )}
-
-            {orderDeliveryType === "takeaway" && (
-              <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                <Store className="w-4 h-4 text-emerald-600 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-emerald-800">Takeaway from FishTokri Store</p>
-                  <p className="text-[11px] text-emerald-600">Customer will collect this order directly from the store. No delivery address required.</p>
-                </div>
-              </div>
-            )}
-
-            {/* ITEMS */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Items <span className="text-gray-300">({totalItemCount})</span>
-                </p>
-              </div>
-
-              {/* Action bar — prominent Add Product + Custom Item */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Popover open={productPickerOpen} onOpenChange={(o) => { setProductPickerOpen(o); if (!o) { setPickerCategory(null); setProductSearch(""); } }}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      disabled={!selectedSubHubId}
-                      className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#1A56DB] text-white text-sm font-semibold shadow-sm hover:bg-[#1647b8] active:bg-[#0f3a99] transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                      title={selectedSubHubId ? "Add a product from the catalog" : "Select a sub-hub first"}
-                    >
-                      <Package className="w-4 h-4" />
-                      Add Product
-                    </button>
-                  </PopoverTrigger>
-                    <PopoverContent
-                      className="p-0 shadow-xl border border-gray-100 rounded-2xl overflow-hidden w-[420px]"
-                      align="end"
-                      sideOffset={6}
-                      style={{ maxHeight: "min(420px, var(--radix-popover-content-available-height))" }}
-                    >
-                      <div className="p-2 border-b border-gray-100 bg-gray-50/80 space-y-2">
-                        {pickerCategory && (
-                          <button
-                            type="button"
-                            onClick={() => { setPickerCategory(null); setProductSearch(""); }}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1A56DB] hover:underline"
-                          >
-                            <ChevronDown className="w-3 h-3 rotate-90" /> Back to categories
-                          </button>
-                        )}
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                          <Input
-                            autoFocus
-                            value={productSearch}
-                            onChange={(e) => setProductSearch(e.target.value)}
-                            placeholder={pickerCategory ? `Search in ${pickerCategory}...` : "Search categories or products..."}
-                            className="pl-7 h-8 text-sm"
-                          />
-                        </div>
-                        {pickerCategory && (
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                            {pickerCategory} <span className="text-gray-300">· {filteredProducts.length} item{filteredProducts.length === 1 ? "" : "s"}</span>
-                          </p>
-                        )}
-                      </div>
-                      <div
-                        className="max-h-[320px] overflow-y-auto overscroll-contain py-1"
-                        onWheel={(e) => e.stopPropagation()}
-                        onTouchMove={(e) => e.stopPropagation()}
-                      >
-                        {loadingProducts ? (
-                          <p className="p-4 text-xs text-gray-400 text-center">Loading products...</p>
-                        ) : !pickerCategory && !productSearch.trim() ? (
-                          filteredCategories.length === 0 ? (
-                            <p className="p-4 text-xs text-gray-400 text-center">No categories available.</p>
-                          ) : (
-                            filteredCategories.map((c) => (
-                              <button
-                                key={c.name}
-                                type="button"
-                                onClick={() => { setPickerCategory(c.name); setProductSearch(""); }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-blue-50 transition-colors text-left"
-                              >
-                                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                  <Package className="w-4 h-4 text-[#1A56DB]" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-[#162B4D] truncate">{c.name}</p>
-                                  <p className="text-[11px] text-gray-400">{c.count} product{c.count === 1 ? "" : "s"}</p>
-                                </div>
-                                <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 -rotate-90" />
-                              </button>
-                            ))
-                          )
-                        ) : filteredProducts.length === 0 ? (
-                          <p className="p-4 text-xs text-gray-400 text-center">No products match.</p>
-                        ) : (
-                          filteredProducts.map((p) => {
-                            const pid = String(p._id);
-                            const already = selectedProducts.find((sp) => sp.productId === pid);
-                            return (
-                              <button
-                                key={pid}
-                                disabled={(Number(p.quantity) || 0) <= 0 || (already?.quantity ?? 0) >= (Number(p.quantity) || 0)}
-                                onClick={() => {
-                                  const stock = Number(p.quantity) || 0;
-                                  if (stock <= 0) {
-                                    toast({ title: "Out of stock", description: `${p.name} is unavailable in this sub-hub.`, variant: "destructive" });
-                                    return;
-                                  }
-                                  const current = already?.quantity ?? 0;
-                                  if (current + 1 > stock) {
-                                    toast({ title: "Stock limit reached", description: `Only ${stock} ${p.unit || "unit(s)"} available for ${p.name}.`, variant: "destructive" });
-                                    return;
-                                  }
-                                  setSelectedProducts((prev) => {
-                                    const exists = prev.find((sp) => sp.productId === pid);
-                                    if (exists) {
-                                      return prev.map((sp) => sp.productId === pid ? { ...sp, quantity: sp.quantity + 1 } : sp);
-                                    }
-                                    return [...prev, {
-                                      productId: pid,
-                                      name: p.name,
-                                      price: Number(p.price) || 0,
-                                      unit: p.unit ?? "",
-                                      quantity: 1,
-                                    }];
-                                  });
-                                }}
-                                className={`w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${already ? "bg-blue-50/40" : ""}`}
-                              >
-                                {p.imageUrl ? (
-                                  <img src={p.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-100 flex-shrink-0" />
-                                ) : (
-                                  <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                    <Package className="w-4 h-4 text-gray-300" />
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-[#162B4D] truncate">{p.name}</p>
-                                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                                    <span className="font-semibold text-[#1A56DB]">{formatRupees(p.price)}</span>
-                                    {p.unit && <span>/ {p.unit}</span>}
-                                    {p.category && <span className="truncate">· {p.category}</span>}
-                                  </div>
-                                </div>
-                                {already ? (
-                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">×{already.quantity}</span>
-                                ) : (
-                                  <Plus className="w-3.5 h-3.5 text-[#1A56DB] flex-shrink-0" />
-                                )}
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                      {selectedProducts.length > 0 && (
-                        <div className="p-2 border-t border-gray-100 bg-gray-50/80 text-[11px] text-gray-500 flex items-center justify-between">
-                          <span>{selectedProducts.length} selected</span>
-                          <button onClick={() => setProductPickerOpen(false)} className="font-semibold text-[#1A56DB] hover:underline">Done</button>
-                        </div>
-                      )}
-                    </PopoverContent>
-                </Popover>
-
-                <button
-                  type="button"
-                  onClick={() => setOrderItems((arr) => [...arr, { name: "", price: "", quantity: "1", unit: "" }])}
-                  className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#1A56DB]/40 text-[#1A56DB] text-sm font-semibold bg-[#1A56DB]/5 hover:bg-[#1A56DB]/10 hover:border-[#1A56DB]/60 transition-colors"
-                  title="Add a one-off item not in the catalog"
-                >
-                  <Plus className="w-4 h-4" />
-                  Custom Item
-                </button>
-              </div>
-
-              {!selectedSubHubId && selectedProducts.length === 0 && orderItems.length === 0 && (
-                <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-[11px] text-amber-700 inline-flex items-start gap-2">
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                  <span>Select a sub-hub above to choose products from its catalog, or add a custom item.</span>
-                </div>
-              )}
-
-              {selectedSubHubId && selectedProducts.length === 0 && orderItems.length === 0 && (
-                <div className="px-4 py-6 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-center">
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                    <ShoppingBag className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <p className="text-sm font-semibold text-[#162B4D]">No items added yet</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">Use <span className="font-semibold text-[#1A56DB]">Add Product</span> to pick from the catalog or <span className="font-semibold text-[#1A56DB]">Custom Item</span> for a one-off entry.</p>
-                </div>
-              )}
-
-              {/* Selected catalog products */}
-              {selectedProducts.length > 0 && (
-                <div className="space-y-1.5">
-                  {selectedProducts.map((p, idx) => {
-                    const stock = stockOf(p.productId);
-                    const atMax = p.quantity >= stock;
-                    return (
-                    <div key={p.productId} className="flex items-center gap-2 p-2 rounded-xl border border-blue-100 bg-blue-50/50">
-                      <ShoppingBag className="w-3.5 h-3.5 text-[#1A56DB] flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#162B4D] truncate">{p.name}</p>
-                        <p className="text-[11px] text-gray-500">
-                          {formatRupees(p.price)}{p.unit ? ` / ${p.unit}` : ""}
-                          {Number.isFinite(stock) && (
-                            <span className={`ml-1 ${atMax ? "text-amber-600 font-semibold" : "text-gray-400"}`}>· stock {stock}</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg">
-                        <button
-                          onClick={() => setSelectedProducts((arr) => arr.map((x, i) => i === idx ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))}
-                          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-[#1A56DB]"
-                        >−</button>
-                        <Input
-                          type="number"
-                          value={p.quantity}
-                          onChange={(e) => {
-                            const requested = Math.max(1, Number(e.target.value) || 1);
-                            const clamped = Math.min(requested, stock);
-                            if (requested > stock) {
-                              toast({ title: "Stock limit reached", description: `Only ${stock} ${p.unit || "unit(s)"} available for ${p.name}.`, variant: "destructive" });
-                            }
-                            setSelectedProducts((arr) => arr.map((x, i) => i === idx ? { ...x, quantity: clamped } : x));
-                          }}
-                          className="h-7 w-12 text-center text-sm border-0 px-0 focus-visible:ring-0"
-                        />
-                        <button
-                          disabled={atMax}
-                          onClick={() => {
-                            if (atMax) {
-                              toast({ title: "Stock limit reached", description: `Only ${stock} ${p.unit || "unit(s)"} available for ${p.name}.`, variant: "destructive" });
-                              return;
-                            }
-                            setSelectedProducts((arr) => arr.map((x, i) => i === idx ? { ...x, quantity: x.quantity + 1 } : x));
-                          }}
-                          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-[#1A56DB] disabled:text-gray-300 disabled:cursor-not-allowed"
-                        >+</button>
-                      </div>
-                      <span className="text-sm font-bold text-[#162B4D] w-16 text-right">{formatRupees(p.price * p.quantity)}</span>
-                      <button
-                        onClick={() => setSelectedProducts((arr) => arr.filter((_, i) => i !== idx))}
-                        className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                      >
-                        <Trash className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Custom items */}
-              {orderItems.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase">Custom items</p>
-                  {orderItems.map((it, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                      <Input value={it.name} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))} placeholder="Item name" className="h-9 text-sm col-span-5" />
-                      <Input value={it.price} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, price: e.target.value } : x))} placeholder="Price" type="number" className="h-9 text-sm col-span-2" />
-                      <Input value={it.quantity} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, quantity: e.target.value } : x))} placeholder="Qty" type="number" className="h-9 text-sm col-span-2" />
-                      <Input value={it.unit} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, unit: e.target.value } : x))} placeholder="Unit" className="h-9 text-sm col-span-2" />
-                      <button
-                        onClick={() => setOrderItems((arr) => arr.filter((_, i) => i !== idx))}
-                        className="col-span-1 h-9 flex items-center justify-center text-gray-400 hover:text-red-500"
-                      >
-                        <Trash className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-2 px-3 py-2 bg-[#162B4D]/5 rounded-xl space-y-1">
-                <div className="flex items-center justify-between text-[11px] text-gray-500">
-                  <span>Subtotal</span>
-                  <span>{formatRupees(itemsSubtotal)}</span>
-                </div>
-                {couponDiscount > 0 && (
-                  <div className="flex items-center justify-between text-[11px] text-emerald-600">
-                    <span className="inline-flex items-center gap-1">
-                      <Ticket className="w-3 h-3" />
-                      {appliedCoupons.length > 1
-                        ? `Coupons (${appliedCoupons.length})`
-                        : `Coupon ${appliedCoupons[0]?.code ?? ""}`}
-                    </span>
-                    <span>− {formatRupees(couponDiscount)}</span>
-                  </div>
-                )}
-                {slotExtraCharge > 0 && (
-                  <div className="flex items-center justify-between text-[11px] text-gray-500">
-                    <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> Slot charge</span>
-                    <span>+ {formatRupees(slotExtraCharge)}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-1 border-t border-[#162B4D]/10">
-                  <span className="text-xs font-semibold text-gray-600">Order Total</span>
-                  <span className="font-bold text-[#162B4D] text-base">{formatRupees(newOrderTotal)}</span>
-                </div>
-                {paymentStatus !== "unpaid" && paidTotal > 0 && (
-                  <>
-                    <div className="flex items-center justify-between text-[11px] text-emerald-600">
-                      <span>Paid</span>
-                      <span>{formatRupees(paidTotal)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-amber-600">
-                      <span>Due</span>
-                      <span>{formatRupees(dueAmount)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* COUPON — only after a product/item is added */}
-            {totalItemCount > 0 && (
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Coupons</p>
-
-                {appliedCoupons.length > 0 && (
-                  <div className="space-y-1.5">
-                    {appliedCoupons.map((c) => {
-                      const min = Number(c.minOrderAmount) || 0;
-                      const v = Number(c.discountValue) || 0;
-                      const eligible = itemsSubtotal >= min;
-                      const saved = !eligible
-                        ? 0
-                        : c.type === "percentage"
-                          ? Math.round((itemsSubtotal * v) / 100)
-                          : v;
-                      return (
-                        <div
-                          key={String(c._id)}
-                          className="flex items-center gap-2 p-2.5 rounded-xl border border-emerald-200 bg-emerald-50"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                            <Ticket className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-emerald-800 truncate">
-                              {c.code}{" "}
-                              <span className="text-[11px] font-normal text-emerald-600">
-                                {eligible ? `· saved ${formatRupees(saved)}` : `· min ₹${min} required`}
-                              </span>
-                            </p>
-                            {c.title && <p className="text-[11px] text-emerald-700 truncate">{c.title}</p>}
-                          </div>
-                          <button
-                            onClick={() => toggleCoupon(String(c._id))}
-                            className="text-emerald-700 hover:text-red-500"
-                            aria-label="Remove coupon"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                    <Input
-                      value={couponCode}
-                      onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
-                      placeholder="Enter coupon code"
-                      className="pl-7 h-9 text-sm"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={applyCouponByCode}
-                    disabled={!couponCode.trim()}
-                    className="h-9 text-sm"
-                  >Apply</Button>
-                </div>
-                {couponError && <p className="text-[11px] text-red-500">{couponError}</p>}
-
-                {activeCoupons.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 uppercase font-semibold">Available coupons</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {activeCoupons.slice(0, 8).map((c) => {
-                        const id = String(c._id);
-                        const min = Number(c.minOrderAmount) || 0;
-                        const applicable = isCouponApplicable(c);
-                        const eligible = applicable && itemsSubtotal >= min;
-                        const isApplied = appliedCouponIds.includes(id);
-                        const reason = !applicable
-                          ? "Not valid for the items in this order"
-                          : !eligible
-                            ? `Min order ₹${min} required`
-                            : (c.title || c.description || "");
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            disabled={!eligible && !isApplied}
-                            onClick={() => toggleCoupon(id)}
-                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors inline-flex items-center gap-1 ${
-                              isApplied
-                                ? "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                : eligible
-                                  ? "border-blue-200 bg-blue-50 text-[#1A56DB] hover:bg-blue-100"
-                                  : "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed opacity-60"
-                            }`}
-                            title={reason}
-                          >
-                            <Ticket className="w-3 h-3" />
-                            {c.code}
-                            <span className="text-[10px] font-normal opacity-70">
-                              {c.type === "percentage" ? `${c.discountValue}% off` : `₹${c.discountValue} off`}
-                              {min > 0 ? ` · min ₹${min}` : ""}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {selectedSubHubId && !loadingCoupons && activeCoupons.length === 0 && (
-                  <p className="text-[11px] text-gray-400">No active coupons for this sub-hub.</p>
-                )}
-              </div>
-            )}
-
-            {/* PAYMENT */}
-            {totalItemCount > 0 && (
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Payment</p>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { v: "unpaid", label: "Unpaid", color: "amber" },
-                    { v: "partial", label: "Partial", color: "blue" },
-                    { v: "paid", label: "Fully Paid", color: "emerald" },
-                  ] as const).map((opt) => {
-                    const active = paymentStatus === opt.v;
-                    const colorMap: Record<string, string> = {
-                      amber: active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-gray-200 text-gray-500 hover:bg-gray-50",
-                      blue: active ? "border-blue-300 bg-blue-50 text-[#1A56DB]" : "border-gray-200 text-gray-500 hover:bg-gray-50",
-                      emerald: active ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50",
-                    };
-                    return (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setPaymentStatus(opt.v)}
-                        className={`h-9 rounded-xl border text-xs font-semibold transition-colors ${colorMap[opt.color]}`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {paymentStatus !== "unpaid" && (
-                  <div className="space-y-2">
-                    {paymentEntries.map((entry, idx) => {
-                      const ModeIcon = (PAYMENT_MODES.find((m) => m.value === entry.mode)?.Icon) || Tag;
-                      return (
-                        <div
-                          key={idx}
-                          className="grid grid-cols-12 gap-2 items-center p-2 rounded-xl border border-gray-100 bg-gray-50/40"
-                        >
-                          <div className="col-span-5 relative">
-                            <ModeIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                            <select
-                              value={entry.mode}
-                              onChange={(e) =>
-                                setPaymentEntries((arr) =>
-                                  arr.map((p, i) => (i === idx ? { ...p, mode: e.target.value } : p))
-                                )
-                              }
-                              className="w-full h-9 pl-8 pr-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/30"
-                            >
-                              {PAYMENT_MODES.map((m) => (
-                                <option key={m.value} value={m.value}>{m.label}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="col-span-6 relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              min={0}
-                              value={entry.amount}
-                              onChange={(e) => {
-                                const raw = Number(e.target.value);
-                                const otherSum = paymentEntries.reduce(
-                                  (s, p, i) => s + (i === idx ? 0 : Number(p.amount) || 0),
-                                  0
-                                );
-                                const maxAllowed = Math.max(0, newOrderTotal - otherSum);
-                                let next = e.target.value;
-                                if (Number.isFinite(raw) && raw > maxAllowed) {
-                                  next = String(maxAllowed);
-                                }
-                                setPaymentEntries((arr) =>
-                                  arr.map((p, i) => (i === idx ? { ...p, amount: next } : p))
-                                );
-                              }}
-                              placeholder="Amount"
-                              className="pl-6 h-9 text-sm"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setPaymentEntries((arr) => arr.filter((_, i) => i !== idx))}
-                            disabled={paymentEntries.length === 1}
-                            className="col-span-1 h-9 flex items-center justify-center text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                            aria-label="Remove payment"
-                          >
-                            <Trash className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      );
-                    })}
-
-                    <div className="flex items-center justify-between gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          setPaymentEntries((arr) => [
-                            ...arr,
-                            {
-                              mode: "cash",
-                              amount: dueAmount > 0 ? String(dueAmount) : "",
-                              reference: "",
-                            },
-                          ])
-                        }
-                        className="h-8 text-xs gap-1"
-                      >
-                        <Plus className="w-3 h-3" /> Add payment
-                      </Button>
-                      <div className="text-[11px] text-gray-500 flex items-center gap-3">
-                        <span>Paid: <span className="font-semibold text-gray-700">{formatRupees(paidTotal)}</span></span>
-                        <span>
-                          Due:{" "}
-                          <span className={`font-semibold ${dueAmount > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {formatRupees(dueAmount)}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {paymentStatus === "paid" && paidTotal !== newOrderTotal && (
-                      <p className="text-[11px] text-amber-600">
-                        For "Fully Paid", total payments should equal {formatRupees(newOrderTotal)}.
-                      </p>
-                    )}
-                    {paymentStatus === "partial" && (paidTotal <= 0 || paidTotal >= newOrderTotal) && (
-                      <p className="text-[11px] text-amber-600">
-                        For "Partial", paid amount must be greater than 0 and less than {formatRupees(newOrderTotal)}.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SCHEDULE (delivery only — takeaway uses today's date and instant fulfillment) */}
-            {orderDeliveryType === "delivery" && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Delivery Schedule</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold text-gray-500 inline-flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-gray-400" /> Delivery Date
-                  </Label>
-                  <Input
-                    type="date"
-                    value={orderDate}
-                    onChange={(e) => setOrderDate(e.target.value)}
-                    min={new Date().toISOString().slice(0, 10)}
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold text-gray-500">Delivery Type</Label>
-                  <div className="inline-flex w-full rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setOrderScheduleType("slot")}
-                      className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md inline-flex items-center justify-center gap-1 ${orderScheduleType === "slot" ? "bg-white text-[#1A56DB] shadow-sm" : "text-gray-500"}`}
-                    ><Clock className="w-3 h-3" /> Time Slot</button>
-                    <button
-                      type="button"
-                      onClick={() => { setOrderScheduleType("instant"); setSelectedTimeslotId(""); }}
-                      className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md inline-flex items-center justify-center gap-1 ${orderScheduleType === "instant" ? "bg-white text-amber-600 shadow-sm" : "text-gray-500"}`}
-                    ><Zap className="w-3 h-3" /> Instant</button>
-                  </div>
-                </div>
-              </div>
-              {orderScheduleType === "slot" && (
-                <div className="space-y-1">
-                  {!selectedSubHubId ? (
-                    <p className="text-[11px] text-gray-400">Select a sub-hub to see available time slots.</p>
-                  ) : loadingTimeslots ? (
-                    <p className="text-[11px] text-gray-400">Loading time slots...</p>
-                  ) : activeTimeslots.length === 0 ? (
-                    <p className="text-[11px] text-gray-400">No time slots configured for this sub-hub.</p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {activeTimeslots.map((t) => {
-                        const id = String(t._id);
-                        const isSelected = selectedTimeslotId === id;
-                        const extra = Number(t.extraCharge) || 0;
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => setSelectedTimeslotId(id)}
-                            className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all ${isSelected ? "border-[#1A56DB] bg-blue-50" : "border-gray-100 bg-white hover:border-gray-200"}`}
-                          >
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-[#1A56DB] text-white" : "bg-gray-100 text-gray-400"}`}>
-                              {t.isInstant ? <Zap className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-[#162B4D] truncate">{t.label}</p>
-                              <p className="text-[10px] text-gray-400">{t.startTime} – {t.endTime}{extra > 0 ? ` · +₹${extra}` : ""}</p>
-                            </div>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-[#1A56DB] flex-shrink-0" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-              {orderScheduleType === "instant" && (
-                <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-100 rounded-xl">
-                  <Zap className="w-3.5 h-3.5 text-amber-600 mt-0.5" />
-                  <p className="text-[11px] text-amber-700">Order will be sent for delivery as soon as possible.</p>
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* NOTES */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-gray-500">Notes (optional)</Label>
-              <Textarea value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Any special instructions..." className="text-sm min-h-[60px]" />
-            </div>
           </div>
 
-        </div>
+          {/* ── Cart items ── */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {selectedProducts.length === 0 && orderItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center mb-2">
+                  <ShoppingBag className="w-5 h-5 text-gray-300" />
+                </div>
+                <p className="text-xs font-semibold text-gray-400">No items in cart</p>
+                <p className="text-[11px] text-gray-300 mt-0.5">Add items from the menu</p>
+              </div>
+            ) : (
+              <div className="px-3 py-2 space-y-1.5">
+                {selectedProducts.map((p) => {
+                  const stock = stockOf(p.productId);
+                  const atMax = p.quantity >= stock;
+                  return (
+                    <div key={p.productId} className="flex items-center gap-2 py-1.5 border-b border-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[#162B4D] leading-tight truncate">{p.name}</p>
+                        <p className="text-[11px] text-gray-400">₹{Number(p.price).toLocaleString("en-IN")}{p.unit ? `/${p.unit}` : ""}</p>
+                      </div>
+                      <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <button onClick={() => setSelectedProducts((arr) => p.quantity <= 1 ? arr.filter((x) => x.productId !== p.productId) : arr.map((x) => x.productId === p.productId ? { ...x, quantity: x.quantity - 1 } : x))} className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-200 text-sm font-bold">−</button>
+                        <span className="text-xs font-bold text-gray-700 min-w-[16px] text-center">{p.quantity}</span>
+                        <button disabled={atMax} onClick={() => { if (!atMax) setSelectedProducts((arr) => arr.map((x) => x.productId === p.productId ? { ...x, quantity: x.quantity + 1 } : x)); }} className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-200 text-sm font-bold disabled:opacity-30">+</button>
+                      </div>
+                      <span className="text-xs font-bold text-[#162B4D] w-14 text-right flex-shrink-0">₹{(p.price * p.quantity).toLocaleString("en-IN")}</span>
+                    </div>
+                  );
+                })}
+                {orderItems.map((it, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 py-1.5 border-b border-gray-50">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Input value={it.name} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))} placeholder="Item name" className="h-6 text-xs border-0 bg-gray-50 px-1.5 rounded" />
+                      <div className="flex gap-1">
+                        <Input value={it.price} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, price: e.target.value } : x))} placeholder="₹" type="number" className="h-6 text-xs w-14 border-0 bg-gray-50 px-1.5 rounded" />
+                        <Input value={it.quantity} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, quantity: e.target.value } : x))} placeholder="Qty" type="number" className="h-6 text-xs w-10 border-0 bg-gray-50 px-1.5 rounded" />
+                        <Input value={it.unit} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, unit: e.target.value } : x))} placeholder="Unit" className="h-6 text-xs flex-1 border-0 bg-gray-50 px-1.5 rounded" />
+                      </div>
+                    </div>
+                    <button onClick={() => setOrderItems((arr) => arr.filter((_, i) => i !== idx))} className="text-gray-300 hover:text-red-400 flex-shrink-0"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+                <button onClick={() => setOrderItems((arr) => [...arr, { name: "", price: "", quantity: "1", unit: "" }])} className="w-full py-1.5 flex items-center justify-center gap-1 text-[11px] font-semibold text-[#1A56DB] border border-dashed border-[#1A56DB]/30 rounded-lg hover:bg-blue-50 transition-colors mt-1">
+                  <Plus className="w-3 h-3" /> Custom Item
+                </button>
+              </div>
+            )}
+          </div>
 
-        <div className="bg-white border-t border-gray-200">
-          <div className="px-4 sm:px-6 py-3 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setLocation("/orders"); resetCreateForm(); }} disabled={creatingSaving} className="h-9">Cancel</Button>
-            <Button onClick={handleCreateOrder} disabled={creatingSaving} className="bg-[#1A56DB] hover:bg-[#1447B4] h-9 text-white gap-1.5">
+          {/* ── Totals + Payment + Checkout ── */}
+          <div className="flex-shrink-0 border-t border-gray-100 bg-white px-3 py-2.5 space-y-2">
+            {/* Coupon code */}
+            {totalItemCount > 0 && (
+              <div className="flex gap-1.5">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                  <Input value={couponCode} onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }} placeholder="Coupon code" className="pl-6 h-7 text-xs" />
+                </div>
+                <Button type="button" variant="outline" onClick={applyCouponByCode} disabled={!couponCode.trim()} className="h-7 text-xs px-3">Apply</Button>
+              </div>
+            )}
+            {couponError && <p className="text-[10px] text-red-500">{couponError}</p>}
+            {appliedCoupons.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {appliedCoupons.map((c) => (
+                  <span key={String(c._id)} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    <Ticket className="w-2.5 h-2.5" />{c.code}
+                    <button onClick={() => setAppliedCouponIds((ids) => ids.filter((id) => id !== String(c._id)))} className="hover:text-red-500"><X className="w-2.5 h-2.5" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Totals */}
+            <div className="space-y-1 py-1 border-t border-gray-100">
+              <div className="flex justify-between text-[11px] text-gray-500">
+                <span>Subtotal</span>
+                <span>₹{itemsSubtotal.toLocaleString("en-IN")}</span>
+              </div>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-[11px] text-emerald-600">
+                  <span className="flex items-center gap-0.5"><Ticket className="w-2.5 h-2.5" />Discount</span>
+                  <span>−₹{couponDiscount.toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-sm font-bold text-gray-700">Total</span>
+                <span className="text-lg font-extrabold text-[#162B4D]">₹{newOrderTotal.toLocaleString("en-IN")}</span>
+              </div>
+              {paymentStatus !== "unpaid" && paidTotal > 0 && (
+                <div className="flex justify-between text-[11px] text-amber-600">
+                  <span>Due</span>
+                  <span className="font-semibold">₹{dueAmount.toLocaleString("en-IN")}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Method */}
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Payment Method</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { mode: "cash", label: "Cash", Icon: Banknote, color: "emerald" },
+                  { mode: "upi", label: "UPI", Icon: Smartphone, color: "blue" },
+                  { mode: "card", label: "Card", Icon: CreditCard, color: "purple" },
+                ].map(({ mode, label, Icon, color }) => {
+                  const isActive = paymentStatus === "paid" && paymentEntries[0]?.mode === mode && paymentEntries.length === 1;
+                  const colorMap: Record<string, string> = {
+                    emerald: isActive ? "border-emerald-400 bg-emerald-500 text-white" : "border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300",
+                    blue: isActive ? "border-blue-400 bg-blue-500 text-white" : "border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300",
+                    purple: isActive ? "border-purple-400 bg-purple-500 text-white" : "border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-300",
+                  };
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setPaymentStatus("paid");
+                        setPaymentEntries([{ mode, amount: String(newOrderTotal || 0), reference: "" }]);
+                      }}
+                      className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg border text-xs font-semibold transition-all ${colorMap[color]}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setPaymentStatus("unpaid"); setPaymentEntries([]); }}
+                  className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-all ${paymentStatus === "unpaid" ? "border-amber-300 bg-amber-50 text-amber-700" : "border-gray-200 text-gray-400 hover:bg-gray-50"}`}
+                >
+                  Unpaid / COD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPaymentStatus("partial"); if (paymentEntries.length === 0) setPaymentEntries([{ mode: "cash", amount: "", reference: "" }]); }}
+                  className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-all ${paymentStatus === "partial" ? "border-blue-300 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-400 hover:bg-gray-50"}`}
+                >
+                  Partial
+                </button>
+              </div>
+              {paymentStatus === "partial" && (
+                <div className="mt-1.5 flex gap-1.5">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                    <Input type="number" inputMode="decimal" value={paymentEntries[0]?.amount ?? ""} onChange={(e) => setPaymentEntries([{ mode: paymentEntries[0]?.mode || "cash", amount: e.target.value, reference: "" }])} placeholder="Paid amount" className="pl-5 h-7 text-xs" />
+                  </div>
+                  <select value={paymentEntries[0]?.mode || "cash"} onChange={(e) => setPaymentEntries((arr) => arr.map((p, i) => i === 0 ? { ...p, mode: e.target.value } : p))} className="h-7 px-2 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#1A56DB]/30">
+                    {PAYMENT_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Textarea value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Order notes (optional)..." className="text-xs min-h-[40px] resize-none" rows={2} />
+            </div>
+
+            {/* Checkout button */}
+            <Button
+              onClick={handleCreateOrder}
+              disabled={creatingSaving || totalItemCount === 0}
+              className="w-full h-10 bg-[#1A56DB] hover:bg-[#1447B4] text-white font-bold text-sm rounded-xl gap-2 disabled:opacity-60"
+            >
               {creatingSaving
                 ? (editingOrderId ? "Saving..." : "Creating...")
                 : editingOrderId
-                  ? (<><Pencil className="w-3.5 h-3.5" /> Save Changes</>)
-                  : (<><Plus className="w-3.5 h-3.5" /> Create Order</>)}
+                  ? <><Pencil className="w-4 h-4" />Save Changes</>
+                  : <><Zap className="w-4 h-4" />{paymentStatus === "paid" ? `Checkout · ₹${newOrderTotal.toLocaleString("en-IN")}` : paymentStatus === "partial" ? `Save Order (Partial)` : `Save Order (Unpaid)`}</>
+              }
             </Button>
           </div>
         </div>
+        </div>{/* end flex main body */}
       </div>
       )}
+
 
       {/* Order Detail Sheet — slides in from the right */}
       <Sheet open={!!selectedOrder} onOpenChange={(o) => { if (!o) { setSelectedOrder(null); setShowAllPersons(false); } }}>
