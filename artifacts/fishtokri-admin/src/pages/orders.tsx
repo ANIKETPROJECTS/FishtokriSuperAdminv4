@@ -2385,8 +2385,8 @@ export default function Orders() {
           </h1>
           {/* Hub selectors */}
           <div className="flex items-center gap-2 flex-1 min-w-0 ml-2">
-            <Select value={selectedSuperHubId} onValueChange={setSelectedSuperHubId} disabled={loadingSuperHubs}>
-              <SelectTrigger className="h-8 text-xs rounded-full px-3 w-auto max-w-[140px] bg-[#F05B4E] border-none shadow-none text-white [&>svg]:!text-white [&_[data-placeholder]]:!text-white hover:bg-[#e04a3d] transition-colors font-semibold disabled:!opacity-100 disabled:!bg-[#F05B4E] disabled:!text-white">
+            <Select value={selectedSuperHubId} onValueChange={(v) => { if (!loadingSuperHubs) setSelectedSuperHubId(v); }}>
+              <SelectTrigger className="h-8 text-xs rounded-full px-3 w-auto max-w-[140px] bg-[#F05B4E] border-none shadow-none text-white [&>svg]:text-white hover:bg-[#e04a3d] transition-colors font-semibold">
                 <SelectValue placeholder={loadingSuperHubs ? "Loading..." : "Super Hub"} />
               </SelectTrigger>
               <SelectContent>
@@ -2396,8 +2396,8 @@ export default function Orders() {
               </SelectContent>
             </Select>
             <ChevronRight className="w-3.5 h-3.5 text-white flex-shrink-0" />
-            <Select value={selectedSubHubId} onValueChange={setSelectedSubHubId} disabled={!selectedSuperHubId || loadingSubHubs}>
-              <SelectTrigger className="h-8 text-xs rounded-full px-3 w-auto max-w-[140px] bg-[#F05B4E] border-none shadow-none text-white [&>svg]:!text-white [&_[data-placeholder]]:!text-white hover:bg-[#e04a3d] transition-colors font-semibold disabled:!opacity-100 disabled:!bg-[#F05B4E] disabled:!text-white disabled:cursor-not-allowed">
+            <Select value={selectedSubHubId} onValueChange={(v) => { if (selectedSuperHubId && !loadingSubHubs) setSelectedSubHubId(v); }}>
+              <SelectTrigger className="h-8 text-xs rounded-full px-3 w-auto max-w-[140px] bg-[#F05B4E] border-none shadow-none text-white [&>svg]:text-white hover:bg-[#e04a3d] transition-colors font-semibold">
                 <SelectValue placeholder={!selectedSuperHubId ? "Sub Hub" : loadingSubHubs ? "Loading..." : "Sub Hub"} />
               </SelectTrigger>
               <SelectContent>
