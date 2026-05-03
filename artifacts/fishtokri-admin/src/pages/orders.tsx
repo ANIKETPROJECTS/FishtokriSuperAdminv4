@@ -2585,8 +2585,8 @@ export default function Orders() {
           {/* ── RIGHT: ORDER PANEL — single scroll, no tabs ── */}
           <div className="w-[500px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
 
-            {/* ─── TOP: Customer + Address + Schedule (compact, scrollable, capped at 240px) ─── */}
-            <div className="flex-shrink-0 overflow-y-auto border-b border-gray-200" style={{ maxHeight: "240px" }}>
+            {/* ─── Customer + Address + Schedule ─── */}
+            <div className="flex-1 overflow-y-auto">
 
               {/* Customer — phone-search UX */}
               <div className="px-4 pt-3 pb-3 border-b border-gray-100">
@@ -2752,55 +2752,6 @@ export default function Orders() {
               )}
             </div>
 
-            {/* ─── MIDDLE: Cart items (flex-1, always visible) ─── */}
-            <div className="flex-1 overflow-y-auto min-h-[130px]">
-              {selectedProducts.length === 0 && orderItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                    <ShoppingBag className="w-6 h-6 text-gray-300" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-400">Cart is empty</p>
-                  <p className="text-xs text-gray-300 mt-1">Tap any product to add it</p>
-                </div>
-              ) : (
-                <div className="px-4 py-2 space-y-0.5">
-                  {selectedProducts.map((p) => {
-                    const stock = stockOf(p.productId);
-                    const atMax = p.quantity >= stock;
-                    return (
-                      <div key={p.productId} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[#162B4D] leading-tight">{p.name}</p>
-                          <p className="text-xs text-gray-400">₹{Number(p.price).toLocaleString("en-IN")}{p.unit ? ` / ${p.unit}` : ""}</p>
-                        </div>
-                        <div className="flex items-center bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          <button onClick={() => setSelectedProducts((arr) => p.quantity <= 1 ? arr.filter((x) => x.productId !== p.productId) : arr.map((x) => x.productId === p.productId ? { ...x, quantity: x.quantity - 1 } : x))} className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-lg">−</button>
-                          <span className="text-sm font-bold text-gray-700 min-w-[22px] text-center">{p.quantity}</span>
-                          <button disabled={atMax} onClick={() => { if (!atMax) setSelectedProducts((arr) => arr.map((x) => x.productId === p.productId ? { ...x, quantity: x.quantity + 1 } : x)); }} className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-lg disabled:opacity-30">+</button>
-                        </div>
-                        <span className="text-sm font-bold text-[#162B4D] w-16 text-right flex-shrink-0">₹{(p.price * p.quantity).toLocaleString("en-IN")}</span>
-                      </div>
-                    );
-                  })}
-                  {orderItems.map((it, idx) => (
-                    <div key={idx} className="flex items-start gap-2 py-2 border-b border-gray-100">
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <Input value={it.name} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))} placeholder="Item name" className="h-7 text-sm bg-gray-50 border-gray-200" />
-                        <div className="flex gap-1.5">
-                          <Input value={it.price} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, price: e.target.value } : x))} placeholder="₹" type="number" className="h-7 text-sm flex-1 bg-gray-50 border-gray-200" />
-                          <Input value={it.quantity} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, quantity: e.target.value } : x))} placeholder="Qty" type="number" className="h-7 text-sm w-14 bg-gray-50 border-gray-200" />
-                          <Input value={it.unit} onChange={(e) => setOrderItems((arr) => arr.map((x, i) => i === idx ? { ...x, unit: e.target.value } : x))} placeholder="Unit" className="h-7 text-sm w-14 bg-gray-50 border-gray-200" />
-                        </div>
-                      </div>
-                      <button onClick={() => setOrderItems((arr) => arr.filter((_, i) => i !== idx))} className="text-gray-300 hover:text-red-400 mt-0.5 flex-shrink-0"><X className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                  <button onClick={() => setOrderItems((arr) => [...arr, { name: "", price: "", quantity: "1", unit: "" }])} className="w-full py-1.5 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#1A56DB] border border-dashed border-[#1A56DB]/40 rounded-lg hover:bg-blue-50 transition-colors mt-1">
-                    <Plus className="w-3.5 h-3.5" /> Add Custom Item
-                  </button>
-                </div>
-              )}
-            </div>
 
           </div>
 
