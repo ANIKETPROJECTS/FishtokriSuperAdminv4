@@ -2751,7 +2751,7 @@ export default function Orders() {
             </div>{/* end left half */}
 
             {/* ── Right half: Punched Orders / Cart ── */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+            <div className="flex-1 flex flex-col overflow-hidden bg-white">
               <div className="px-3 pt-3 pb-2 border-b border-gray-100 flex-shrink-0 flex items-center justify-between">
                 <p className="text-xs font-bold text-[#162B4D] uppercase tracking-widest">Order</p>
                 {selectedProducts.length > 0 && (
@@ -2790,6 +2790,45 @@ export default function Orders() {
                   </div>
                 )}
               </div>
+
+              {/* ── Coupon section ── */}
+              <div className="flex-shrink-0 border-t border-gray-100 px-3 py-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Coupon</p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    <Input value={couponCode} onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }} placeholder="Enter code" className="pl-7 h-7 text-xs" />
+                  </div>
+                  <Button type="button" variant="outline" onClick={applyCouponByCode} disabled={!couponCode.trim()} className="h-7 text-xs px-2.5">Apply</Button>
+                </div>
+                {couponError && <p className="text-[11px] text-red-500 mt-1">{couponError}</p>}
+                {appliedCoupons.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {appliedCoupons.map((c) => (
+                      <span key={String(c._id)} className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        <Ticket className="w-3 h-3" />{c.code}
+                        <button onClick={() => setAppliedCouponIds((ids) => ids.filter((id) => id !== String(c._id)))} className="hover:text-red-500 ml-0.5"><X className="w-3 h-3" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {!appliedCoupons.length && totalItemCount > 0 && !loadingCoupons && activeCoupons.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {activeCoupons.slice(0, 3).map((c) => {
+                      const cid = String(c._id);
+                      const min = Number(c.minOrderAmount) || 0;
+                      const meetsMin = itemsSubtotal >= min;
+                      const canApply = isCouponApplicable(c) && meetsMin;
+                      const label = c.type === "percentage" ? `${Number(c.discountValue)}% OFF` : `₹${Number(c.discountValue)} OFF`;
+                      return (
+                        <button key={cid} type="button" onClick={() => canApply && toggleCoupon(cid)} disabled={!canApply}
+                          className={`text-[11px] font-semibold px-2 py-0.5 rounded border transition-all ${canApply ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100" : "border-gray-100 text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"}`}
+                        >{c.code} · {label}</button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>{/* end right half */}
 
           </div>{/* end right panel */}
@@ -2799,46 +2838,7 @@ export default function Orders() {
         {/* ══ FULL-WIDTH BOTTOM BAR ══ */}
         <div className="flex-shrink-0 border-t-2 border-gray-100 bg-white flex items-stretch divide-x divide-gray-100" style={{ minHeight: "76px" }}>
 
-          {/* ── Zone 1: Coupon ── */}
-          <div className="w-72 flex-shrink-0 px-4 py-3 flex flex-col justify-center gap-1.5">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Coupon</p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
-                <Input value={couponCode} onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }} placeholder="Enter code" className="pl-7 h-7 text-xs" />
-              </div>
-              <Button type="button" variant="outline" onClick={applyCouponByCode} disabled={!couponCode.trim()} className="h-7 text-xs px-2.5">Apply</Button>
-            </div>
-            {couponError && <p className="text-[11px] text-red-500">{couponError}</p>}
-            {appliedCoupons.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {appliedCoupons.map((c) => (
-                  <span key={String(c._id)} className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                    <Ticket className="w-3 h-3" />{c.code}
-                    <button onClick={() => setAppliedCouponIds((ids) => ids.filter((id) => id !== String(c._id)))} className="hover:text-red-500 ml-0.5"><X className="w-3 h-3" /></button>
-                  </span>
-                ))}
-              </div>
-            )}
-            {!appliedCoupons.length && totalItemCount > 0 && !loadingCoupons && activeCoupons.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {activeCoupons.slice(0, 3).map((c) => {
-                  const cid = String(c._id);
-                  const min = Number(c.minOrderAmount) || 0;
-                  const meetsMin = itemsSubtotal >= min;
-                  const canApply = isCouponApplicable(c) && meetsMin;
-                  const label = c.type === "percentage" ? `${Number(c.discountValue)}% OFF` : `₹${Number(c.discountValue)} OFF`;
-                  return (
-                    <button key={cid} type="button" onClick={() => canApply && toggleCoupon(cid)} disabled={!canApply}
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border transition-all ${canApply ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100" : "border-gray-100 text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"}`}
-                    >{c.code} · {label}</button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* ── Zone 2: Totals ── */}
+          {/* ── Zone 1: Totals ── */}
           <div className="w-52 flex-shrink-0 px-4 py-3 flex flex-col justify-center gap-0.5">
             <div className="flex justify-between text-xs text-gray-400">
               <span>Subtotal</span>
