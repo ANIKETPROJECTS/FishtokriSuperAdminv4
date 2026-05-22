@@ -672,7 +672,6 @@ export default function Orders() {
   const [deliverPayOpen, setDeliverPayOpen] = useState(false);
   const [deliverPayStatus, setDeliverPayStatus] = useState<"unpaid" | "partial" | "paid">("paid");
   const [deliverPayEntries, setDeliverPayEntries] = useState<{ mode: string; amount: string; reference: string }[]>([]);
-  const [deliverWalletTopup, setDeliverWalletTopup] = useState(true);
 
   // Delivery assignment
   const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
@@ -1489,13 +1488,9 @@ export default function Orders() {
         paidAmount: recordedPaidTotal,
         paymentMode: mergedPayments[0]?.mode,
         payments: mergedPayments,
-        ...(overpayment > 0 && deliverWalletTopup ? { walletTopup: overpayment } : {}),
       };
       await apiFetch(`/api/orders/${selectedOrder._id}`, { method: "PUT", body: JSON.stringify(payload) });
-      const walletMsg = overpayment > 0 && deliverWalletTopup
-        ? ` ₹${overpayment.toLocaleString("en-IN")} added to customer wallet.`
-        : "";
-      toast({ title: "Marked as delivered", description: (deliverPayStatus === "paid" ? "Payment recorded." : deliverPayStatus === "partial" ? "Partial payment recorded." : "No payment recorded.") + walletMsg });
+      toast({ title: "Marked as delivered", description: deliverPayStatus === "paid" ? "Payment recorded." : deliverPayStatus === "partial" ? "Partial payment recorded." : "No payment recorded." });
       setSelectedOrder((o: any) => ({
         ...o,
         status: "delivered",
@@ -3377,9 +3372,8 @@ export default function Orders() {
               : orderTotal(selectedOrder.items);
             const existingPaid = Number(selectedOrder.paidAmount) || 0;
             const remainingDue = Math.max(0, orderTotalValue - existingPaid);
-            const totalCollectedDialog = existingPaid + (deliverPayStatus === "unpaid" ? 0 : deliverPayPaidTotal);
-            const overpaymentDialog = Math.max(0, totalCollectedDialog - orderTotalValue);
-            const newDue = Math.max(0, orderTotalValue - totalCollectedDialog);
+            const newPaidTotal = existingPaid + (deliverPayStatus === "unpaid" ? 0 : deliverPayPaidTotal);
+            const newDue = Math.max(0, orderTotalValue - newPaidTotal);
 
             return (
               <div className="space-y-4">
@@ -3518,35 +3512,14 @@ export default function Orders() {
                       </Button>
                       <div className="text-[11px] text-gray-500 flex items-center gap-3">
                         <span>Collecting: <span className="font-semibold text-gray-700">{formatRupees(deliverPayPaidTotal)}</span></span>
-                        {overpaymentDialog === 0 && (
-                          <span>
-                            New due:{" "}
-                            <span className={`font-semibold ${newDue > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                              {formatRupees(newDue)}
-                            </span>
+                        <span>
+                          New due:{" "}
+                          <span className={`font-semibold ${newDue > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {formatRupees(newDue)}
                           </span>
-                        )}
+                        </span>
                       </div>
                     </div>
-
-                    {overpaymentDialog > 0 && (
-                      <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Wallet className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-blue-800">Customer overpaid by {formatRupees(overpaymentDialog)}</p>
-                            <p className="text-[11px] text-blue-600">Add extra to FishTokri Wallet?</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setDeliverWalletTopup((v) => !v)}
-                          className={`flex-shrink-0 relative w-10 h-6 rounded-full transition-colors ${deliverWalletTopup ? "bg-blue-600" : "bg-gray-300"}`}
-                        >
-                          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${deliverWalletTopup ? "translate-x-4" : "translate-x-0"}`} />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
