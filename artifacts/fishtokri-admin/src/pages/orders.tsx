@@ -789,11 +789,12 @@ export default function Orders() {
       building: "", street: "", area: "", pincode: "",
     });
     setOrderNotes("");
-    setSelectedSuperHubId(""); setSelectedSubHubId("");
-    setSubHubs([]); setSubHubProducts([]); setSelectedProducts([]);
+    // Keep hub selection (super + sub) so the user doesn't have to re-pick every time.
+    // Clear only the cart and per-order state.
+    setSelectedProducts([]);
     setProductSearch(""); setProductPickerOpen(false);
-    setCoupons([]); setAppliedCouponIds([]); setCouponCode(""); setCouponError("");
-    setTimeslots([]); setSelectedTimeslotId("");
+    setAppliedCouponIds([]); setCouponCode(""); setCouponError("");
+    setSelectedTimeslotId("");
     setOrderScheduleType("slot");
     setOrderDate(new Date().toISOString().slice(0, 10));
     setPaymentStatus("unpaid");
