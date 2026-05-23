@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Warehouse, Users, LogOut, Building2, Store, Truck, UserCircle, ShoppingBasket, ClipboardList, Handshake, ChevronLeft, ChevronRight, Boxes, ChevronDown, FolderOpen, Landmark, ArrowDownCircle, ArrowUpCircle, SlidersHorizontal, FileText, Receipt, Package, History, Menu, X } from "lucide-react";
+import { LayoutDashboard, Warehouse, Users, LogOut, Building2, Store, Truck, UserCircle, ShoppingBasket, ClipboardList, Handshake, ChevronLeft, ChevronRight, Boxes, ChevronDown, FolderOpen, Landmark, ArrowDownCircle, ArrowUpCircle, SlidersHorizontal, FileText, Receipt, Package, History, Menu, X, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -42,6 +42,7 @@ const masterAdminNavItems = [
   },
   { href: "/admin-users", label: "Admin Users", icon: Users },
   { href: "/customers", label: "Customers", icon: ShoppingBasket },
+  { href: "/delivery-report", label: "Delivery Report", icon: FileBarChart },
 ];
 
 function getAdminData() {
@@ -243,12 +244,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
     "/inventory",
     "/banking",
     "/customers",
+    "/delivery-report",
   ]);
   const subHubAllowedHrefs = new Set([
     "/dashboard",
     "/orders",
     "/inventory",
     "/customers",
+    "/delivery-report",
   ]);
 
   const filterNavByHrefs = (items: any[], allowed: Set<string>) =>
@@ -264,6 +267,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/delivery-dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-deliveries", label: "Orders", icon: Truck },
     { href: "/my-deliveries-hubs", label: "My Hubs", icon: Building2 },
+    { href: "/delivery-report", label: "My Report", icon: FileBarChart },
   ];
 
   const navItems = isSuperHub

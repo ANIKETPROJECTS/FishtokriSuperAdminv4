@@ -32,6 +32,7 @@ import BankingOverview from "@/pages/banking-overview";
 import BankingAccounts from "@/pages/banking-accounts";
 import BankingReceipts from "@/pages/banking-receipts";
 import BankingPayments from "@/pages/banking-payments";
+import DeliveryReport from "@/pages/delivery-report";
 import { Layout } from "@/components/layout";
 
 const queryClient = new QueryClient({
@@ -255,6 +256,11 @@ function App() {
             </Route>
             <Route path="/my-hub">
               <RedirectTo to="/hubs" />
+            </Route>
+
+            {/* Delivery Report — all roles */}
+            <Route path="/delivery-report">
+              <ProtectedRoute component={DeliveryReport} allowedRoles={[...ALL_ADMIN_ROLES, "delivery_person"]} />
             </Route>
 
             {/* Delivery Person routes (unchanged) */}
