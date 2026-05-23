@@ -33,6 +33,7 @@ import BankingAccounts from "@/pages/banking-accounts";
 import BankingReceipts from "@/pages/banking-receipts";
 import BankingPayments from "@/pages/banking-payments";
 import DeliveryReport from "@/pages/delivery-report";
+import DeliveryReportPerson from "@/pages/delivery-report-person";
 import { Layout } from "@/components/layout";
 
 const queryClient = new QueryClient({
@@ -259,6 +260,9 @@ function App() {
             </Route>
 
             {/* Delivery Report — all roles */}
+            <Route path="/delivery-report/person/:id">
+              <ProtectedRoute component={DeliveryReportPerson} allowedRoles={[...ALL_ADMIN_ROLES, "delivery_person"]} />
+            </Route>
             <Route path="/delivery-report">
               <ProtectedRoute component={DeliveryReport} allowedRoles={[...ALL_ADMIN_ROLES, "delivery_person"]} />
             </Route>
