@@ -150,12 +150,14 @@ async function persistBatches(
     logger.info({ productId: String(productId), newTotal: total, batchCount: normalized.length }, "persistBatches: stock updated successfully");
   }
 
-  // If all batches have an expiry date and every one of them is expired, deactivate any combos that include this product.
+  // Sync combo isActive based on whether this product's stock is available.
   if (combosCol && normalized.length > 0) {
     const allExpired = normalized.every(
       (b) => b.expiryDate && new Date(b.expiryDate).getTime() < nowMs,
     );
+
     if (allExpired) {
+      // All batches expired → deactivate every combo that contains this product.
       const deactivated = await combosCol.updateMany(
         { "includes.productId": String(productId), isActive: true },
         { $set: { isActive: false, updatedAt: new Date() } },
@@ -164,6 +166,35 @@ async function persistBatches(
         logger.info(
           { productId: String(productId), combosDeactivated: deactivated.modifiedCount },
           "persistBatches: all batches expired — deactivated combos containing this product",
+        );
+      }
+    } else if (total > 0) {
+      // Product now has available stock — re-activate any inactive combo that includes
+      // this product, but only when ALL of its other constituent products also have stock.
+      const inactiveCombos = await combosCol.find(
+        { "includes.productId": String(productId), isActive: false },
+      ).toArray();
+
+      const toReactivate: any[] = [];
+      for (const combo of inactiveCombos) {
+        const includes: any[] = Array.isArray(combo.includes) ? combo.includes : [];
+        let allHaveStock = true;
+        for (const inc of includes) {
+          if (String(inc.productId) === String(productId)) continue; // already confirmed > 0
+          const other = await productsCol.findOne({ _id: toId(inc.productId) }, { projection: { quantity: 1 } });
+          if (!other || (Number(other.quantity) || 0) <= 0) { allHaveStock = false; break; }
+        }
+        if (allHaveStock) toReactivate.push(combo._id);
+      }
+
+      if (toReactivate.length > 0) {
+        await combosCol.updateMany(
+          { _id: { $in: toReactivate } },
+          { $set: { isActive: true, updatedAt: new Date() } },
+        );
+        logger.info(
+          { productId: String(productId), combosReactivated: toReactivate.length },
+          "persistBatches: product stock restored — reactivated combos containing this product",
         );
       }
     }
