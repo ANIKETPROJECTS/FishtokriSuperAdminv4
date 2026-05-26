@@ -83,11 +83,7 @@ const customerSchema = new mongoose.Schema(
     name: String,
     email: String,
     phone: String,
-    alternatePhone: String,
     dateOfBirth: String,
-    gender: String,
-    notes: String,
-    customerNumber: { type: Number, default: null },
     walletBalance: { type: Number, default: 0 },
     addresses: { type: Array, default: [] },
     orders: { type: Array, default: [] },
@@ -105,14 +101,10 @@ async function getCustomerModel() {
 function serializeCustomer(doc: any) {
   return {
     id: String(doc._id),
-    customerNumber: doc.customerNumber ?? null,
     name: doc.name ?? "",
     email: doc.email ?? "",
     phone: doc.phone ?? "",
-    alternatePhone: doc.alternatePhone ?? "",
     dateOfBirth: doc.dateOfBirth ?? "",
-    gender: doc.gender ?? "",
-    notes: doc.notes ?? "",
     walletBalance: Number(doc.walletBalance) || 0,
     addresses: doc.addresses ?? [],
     orders: doc.orders ?? [],
@@ -122,24 +114,6 @@ function serializeCustomer(doc: any) {
   };
 }
 
-let _migrationDone = false;
-async function ensureCustomerNumbers(): Promise<void> {
-  if (_migrationDone) return;
-  try {
-    const Customer = await getCustomerModel();
-    const unassigned = await Customer.countDocuments({ customerNumber: { $in: [null, undefined] } });
-    if (unassigned > 0) {
-      const maxDoc = await Customer.findOne({ customerNumber: { $ne: null } }).sort({ customerNumber: -1 }) as any;
-      let next = (maxDoc?.customerNumber ?? 0) + 1;
-      const docs = await Customer.find({ customerNumber: { $in: [null, undefined] } }).sort({ createdAt: 1 }).select("_id") as any[];
-      const ops = docs.map((d: any) => ({
-        updateOne: { filter: { _id: d._id }, update: { $set: { customerNumber: next++ } } },
-      }));
-      if (ops.length) await Customer.bulkWrite(ops as any);
-    }
-    _migrationDone = true;
-  } catch (_) {}
-}
 
 function sanitizeAddresses(addresses: any): any[] {
   if (!Array.isArray(addresses)) return [];
@@ -285,7 +259,6 @@ async function enrichCustomers(customers: any[], log?: any) {
 
 router.get("/", async (req: ScopedRequest, res) => {
   try {
-    await ensureCustomerNumbers();
     const Customer = await getCustomerModel();
     const { search, sort = "createdAt_desc", page = "1", limit = "20" } = req.query as Record<string, string>;
 
@@ -365,7 +338,7 @@ router.get("/:id", async (req: ScopedRequest, res) => {
 router.post("/", async (req, res) => {
   try {
     const Customer = await getCustomerModel();
-    const { name, email, phone, alternatePhone, dateOfBirth, gender, notes, addresses } = req.body;
+    const { name, email, phone, dateOfBirth, addresses } = req.body;
 
     if (!name || !String(name).trim()) {
       res.status(400).json({ error: "ValidationError", message: "Name is required" });
@@ -392,18 +365,11 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const maxDoc = await Customer.findOne({ customerNumber: { $ne: null } }).sort({ customerNumber: -1 }) as any;
-    const nextNumber = (maxDoc?.customerNumber ?? 0) + 1;
-
     const customer = await Customer.create({
       name: String(name).trim(),
       email: emailTrim || null,
       phone: phoneTrim,
-      alternatePhone: alternatePhone ? String(alternatePhone).trim() : "",
       dateOfBirth: dateOfBirth ?? null,
-      gender: gender ?? "",
-      notes: notes ?? "",
-      customerNumber: nextNumber,
       addresses: sanitizeAddresses(addresses),
       orders: [],
     });
@@ -429,7 +395,7 @@ router.put("/:id", async (req: ScopedRequest, res) => {
       res.status(404).json({ error: "NotFound", message: "Customer not found" }); return;
     }
 
-    const { name, email, phone, alternatePhone, dateOfBirth, gender, notes, addresses } = req.body;
+    const { name, email, phone, dateOfBirth, addresses, walletBalance } = req.body;
 
     if (email !== undefined && email && String(email).toLowerCase().trim() !== String(customer.email ?? "")) {
       const existing = await Customer.findOne({ email: String(email).toLowerCase().trim(), _id: { $ne: customer._id } });
@@ -453,10 +419,7 @@ router.put("/:id", async (req: ScopedRequest, res) => {
     if (name !== undefined) customer.name = String(name).trim();
     if (email !== undefined) (customer as any).email = email ? String(email).toLowerCase().trim() : null;
     if (phone !== undefined) (customer as any).phone = String(phone).trim();
-    if (alternatePhone !== undefined) (customer as any).alternatePhone = String(alternatePhone).trim();
     if (dateOfBirth !== undefined) (customer as any).dateOfBirth = dateOfBirth;
-    if (gender !== undefined) (customer as any).gender = gender;
-    if (notes !== undefined) (customer as any).notes = notes;
     if (addresses !== undefined) (customer as any).addresses = sanitizeAddresses(addresses);
     if (walletBalance !== undefined) (customer as any).walletBalance = Math.max(0, Number(walletBalance) || 0);
 

@@ -57,14 +57,10 @@ const ACTIVE_ORDER_STATUSES = new Set(["pending", "confirmed", "out_for_delivery
 
 interface Customer {
   id: string;
-  customerNumber?: number | null;
   name: string;
   email: string;
   phone: string;
-  alternatePhone?: string;
   dateOfBirth: string;
-  gender?: string;
-  notes?: string;
   walletBalance?: number;
   addresses: any[];
   orders: any[];
@@ -188,11 +184,6 @@ function formatDateTime(dateStr: any) {
 function formatRupees(value: any) {
   const n = Number(value || 0);
   return `₹${n.toLocaleString("en-IN")}`;
-}
-
-function formatCustomerCode(customerNumber?: number | null) {
-  if (!customerNumber) return "—";
-  return `CUSFT${String(customerNumber).padStart(2, "0")}`;
 }
 
 function normalize(value: any) {
@@ -543,7 +534,6 @@ export default function Customers() {
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
                 {filteredCustomers.map((c) => {
-                  const code = formatCustomerCode(c.customerNumber);
                   const loc = getCustomerLocation(c);
                   const totalSpend = getCustomerTotalSpend(c);
                   const totalOrders = getCustomerTotalOrders(c);
@@ -551,7 +541,6 @@ export default function Customers() {
                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-4">
                         <p className="font-semibold text-black text-sm">{c.name || "—"}</p>
-                        <p className="text-xs text-black mt-0.5">{code}</p>
                         <p className="text-xs text-black mt-0.5">{formatDate(c.createdAt)}</p>
                       </td>
                       <td className="px-3 py-4">
@@ -668,12 +657,10 @@ function EmptyState({ search }: { search: string }) {
 
 function CustomerCard({ customer: c, onView, onEdit, onDelete }: { customer: Customer; onView: () => void; onEdit: () => void; onDelete: () => void }) {
   const { current, history } = splitOrders(c);
-  const code = formatCustomerCode(c.customerNumber);
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3 hover:shadow-md transition-shadow">
       <div>
         <p className="font-semibold text-black text-sm">{c.name || "—"}</p>
-        <p className="text-xs text-black mt-0.5">{code}</p>
         <p className="text-xs text-black mt-0.5">{formatDate(c.createdAt)}</p>
       </div>
       <div className="space-y-1">
@@ -784,7 +771,6 @@ function CustomerDetailPage({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-bold text-[#162B4D]">{fullCustomer.name || "Unnamed customer"}</h2>
-                  <span className="text-xs font-semibold text-[#364F9F] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">{formatCustomerCode(fullCustomer.customerNumber)}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1.5 text-sm text-gray-600">
                   <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-[#F05B4E]" />{fullCustomer.phone || "N.A"}</span>
@@ -811,7 +797,6 @@ function CustomerDetailPage({
           <DetailSection title="Personal & Account Details" icon={UserRound}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <InfoRow label="Name" value={fullCustomer.name} />
-              <InfoRow label="Customer ID" value={formatCustomerCode(fullCustomer.customerNumber)} />
               <InfoRow label="Phone" value={fullCustomer.phone} />
               <InfoRow label="Email" value={fullCustomer.email} />
               <InfoRow label="Date of Birth" value={fullCustomer.dateOfBirth} />
