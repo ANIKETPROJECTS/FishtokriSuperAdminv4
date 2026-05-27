@@ -2880,7 +2880,7 @@ export default function Orders() {
                           const id = String(t._id);
                           const isSelected = selectedTimeslotId === id;
                           const extra = Number(t.extraCharge) || 0;
-                          const displayStart = addMinutesToTimeStr(t.startTime, pincodeTimeDelay);
+                          const displayStart = t.startTime ?? "";
                           const displayEnd = addMinutesToTimeStr(t.endTime, pincodeTimeDelay);
                           return (
                             <button key={id} type="button" onClick={() => setSelectedTimeslotId(id)}
