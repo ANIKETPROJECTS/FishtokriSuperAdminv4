@@ -145,6 +145,18 @@ async function deleteCustomer(id: string): Promise<void> {
   }
 }
 
+async function adjustCustomerWallet(id: string, delta: number, reason?: string): Promise<{ walletBalance: number }> {
+  const base = getBase();
+  const res = await fetch(`${base}/api/customers/${id}/wallet`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ delta, reason }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || "Failed to adjust wallet");
+  return json;
+}
+
 const AVATAR_COLORS = [
   "bg-blue-100 text-blue-700",
   "bg-purple-100 text-purple-700",
@@ -698,6 +710,167 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
+function WalletTopupModal({
+  customer,
+  open,
+  onClose,
+  onSuccess,
+}: {
+  customer: Customer;
+  open: boolean;
+  onClose: () => void;
+  onSuccess: (newBalance: number) => void;
+}) {
+  const [type, setType] = useState<"credit" | "debit">("credit");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: ({ delta, reason }: { delta: number; reason: string }) =>
+      adjustCustomerWallet(customer.id, delta, reason || undefined),
+    onSuccess: (data) => {
+      toast({
+        title: type === "credit" ? "Wallet credited" : "Wallet debited",
+        description: `${type === "credit" ? "Added" : "Deducted"} ₹${Math.abs(Number(amount)).toLocaleString("en-IN")}. New balance: ₹${Number(data.walletBalance).toLocaleString("en-IN")}`,
+      });
+      onSuccess(data.walletBalance);
+      handleClose();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleClose = () => {
+    setAmount("");
+    setReason("");
+    setError("");
+    setType("credit");
+    onClose();
+  };
+
+  const handleSubmit = () => {
+    const num = Number(amount);
+    if (!amount || isNaN(num) || num <= 0) {
+      setError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    if (type === "debit" && num > (Number(customer.walletBalance) || 0)) {
+      setError(`Cannot deduct more than the current balance (₹${Number(customer.walletBalance).toLocaleString("en-IN")}).`);
+      return;
+    }
+    setError("");
+    const delta = type === "credit" ? num : -num;
+    mutation.mutate({ delta, reason });
+  };
+
+  const currentBalance = Number(customer.walletBalance) || 0;
+  const numAmount = Number(amount) || 0;
+  const previewBalance = type === "credit" ? currentBalance + numAmount : Math.max(0, currentBalance - numAmount);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-black flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-blue-500" />
+            Adjust Wallet — {customer.name || "Customer"}
+          </DialogTitle>
+          <DialogDescription>
+            Credit or debit the customer's wallet balance directly.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
+            <Wallet className="w-4 h-4 text-blue-500 flex-shrink-0" />
+            <div>
+              <p className="text-[11px] text-blue-600 font-medium">Current Wallet Balance</p>
+              <p className="text-lg font-bold text-blue-700">₹{currentBalance.toLocaleString("en-IN")}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-black">Transaction Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => { setType("credit"); setError(""); }}
+                className={`h-9 rounded-lg border text-xs font-semibold transition-colors ${
+                  type === "credit"
+                    ? "bg-emerald-500 border-emerald-500 text-white"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-emerald-200 hover:text-emerald-600"
+                }`}
+              >
+                + Credit (Add)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setType("debit"); setError(""); }}
+                className={`h-9 rounded-lg border text-xs font-semibold transition-colors ${
+                  type === "debit"
+                    ? "bg-red-500 border-red-500 text-white"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-600"
+                }`}
+              >
+                − Debit (Deduct)
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-black">Amount (₹) <span className="text-red-500">*</span></Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-500">₹</span>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                value={amount}
+                onChange={(e) => { setAmount(e.target.value); setError(""); }}
+                placeholder="0"
+                className={`pl-7 ${error ? "border-red-400" : ""}`}
+              />
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-black">Reason / Note <span className="text-gray-400 font-normal">(optional)</span></Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Refund, Promotional credit, Adjustment…"
+            />
+          </div>
+
+          {numAmount > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 text-xs">
+              <span className="text-gray-500">New balance after {type === "credit" ? "credit" : "debit"}</span>
+              <span className={`text-sm font-bold ${type === "credit" ? "text-emerald-600" : "text-red-600"}`}>
+                ₹{previewBalance.toLocaleString("en-IN")}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>Cancel</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={mutation.isPending || !amount}
+            className={type === "credit" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"}
+          >
+            {mutation.isPending ? "Processing…" : type === "credit" ? "Credit Wallet" : "Debit Wallet"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CustomerDetailPage({
   customerId, onBack, onEdit, onDelete,
 }: {
@@ -706,6 +879,8 @@ function CustomerDetailPage({
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
 }) {
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["customer", customerId],
     queryFn: () => fetchCustomer(customerId),
@@ -721,6 +896,17 @@ function CustomerDetailPage({
 
   return (
     <div style={{ fontFamily: "'Poppins', sans-serif" }}>
+      {fullCustomer && walletModalOpen && (
+        <WalletTopupModal
+          customer={fullCustomer}
+          open={walletModalOpen}
+          onClose={() => setWalletModalOpen(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+            setWalletModalOpen(false);
+          }}
+        />
+      )}
       <div className="flex items-center justify-between mb-5">
         <button
           onClick={onBack}
@@ -731,6 +917,13 @@ function CustomerDetailPage({
         </button>
         {fullCustomer && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWalletModalOpen(true)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-gray-200 bg-white text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-colors"
+            >
+              <Wallet className="w-[14px] h-[14px]" />
+              Wallet
+            </button>
             <button
               onClick={() => onEdit(fullCustomer)}
               className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-gray-200 bg-white text-black hover:bg-blue-50 hover:border-blue-200 hover:text-[#1A56DB] transition-colors"
