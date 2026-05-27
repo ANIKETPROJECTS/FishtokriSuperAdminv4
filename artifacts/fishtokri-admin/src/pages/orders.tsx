@@ -1113,13 +1113,21 @@ export default function Orders() {
 
     if (walletApplied > 0 && remaining > 0) {
       // Wallet covers part + remaining via main mode.
-      // Wallet+cash together = full total (wallet deducted now, cash on delivery) → "paid".
-      // Wallet+UPI together = full total paid immediately → "paid".
-      setPaymentStatus("paid");
-      setPaymentEntries([
-        { mode: "wallet", amount: String(walletApplied), reference: "" },
-        { mode: mainPaymentMode, amount: String(remaining), reference: "" },
-      ]);
+      if (mainPaymentMode === "upi") {
+        // UPI is an immediate payment — wallet + UPI together cover the full total now → "paid".
+        setPaymentStatus("paid");
+        setPaymentEntries([
+          { mode: "wallet", amount: String(walletApplied), reference: "" },
+          { mode: "upi", amount: String(remaining), reference: "" },
+        ]);
+      } else {
+        // Cash/COD: wallet is deducted now but cash is collected at delivery → "partial".
+        // Only record the wallet entry as paid; the cash portion remains due.
+        setPaymentStatus("partial");
+        setPaymentEntries([
+          { mode: "wallet", amount: String(walletApplied), reference: "" },
+        ]);
+      }
     } else if (walletApplied >= newOrderTotal && newOrderTotal > 0) {
       // Wallet covers everything
       setPaymentStatus("paid");
