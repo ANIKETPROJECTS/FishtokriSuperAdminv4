@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch, formatRupees, formatDateDDMMYYYY } from "@/lib/api";
+import { printHtmlWithQZ } from "@/lib/qz-print";
 
 interface Invoice {
   id: string;
@@ -227,8 +228,15 @@ export default function VendorInvoices() {
     }
   };
 
-  const printInvoice = (inv: Invoice) => {
+  const printInvoice = async (inv: Invoice) => {
     const html = renderVoucherHTML(inv);
+
+    toast({ title: "Printing..." });
+    const result = await printHtmlWithQZ(html);
+    if (result.success) return;
+
+    // QZ Tray unavailable — fall back to browser print dialog
+    toast({ title: "Print failed, opening dialog...", variant: "destructive" });
     const w = window.open("", "_blank", "width=800,height=900");
     if (!w) { toast({ title: "Allow pop-ups to print", variant: "destructive" }); return; }
     w.document.write(html);

@@ -40,6 +40,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { printHtmlWithQZ } from "@/lib/qz-print";
 import { useLocation } from "wouter";
 import { getCurrentAdminScope } from "@/lib/api";
 import { DayPicker } from "react-day-picker";
@@ -258,6 +259,7 @@ function numberToWords(n: number): string {
 }
 
 function InvoiceModal({ order, onClose }: { order: any; onClose: () => void }) {
+  const { toast } = useToast();
   const items: any[] = order.items ?? [];
   const subtotal = Number(order.subtotal) > 0 ? Number(order.subtotal) : orderTotal(items);
   const totalQty = items.reduce((s: number, i: any) => s + (Number(i.quantity) || 1), 0);
@@ -299,10 +301,7 @@ function InvoiceModal({ order, onClose }: { order: any; onClose: () => void }) {
     order.paymentStatus === "paid" ? "Paid" :
     order.paymentStatus === "partial" ? "Partial" : "Unpaid";
 
-  const handlePrint = () => {
-    const win = window.open("", "_blank");
-    if (!win) return;
-
+  const handlePrint = async () => {
     const itemRows = items.map((it: any) => {
       const qty = Number(it.quantity) || 1;
       const rate = Number(it.price) || 0;
@@ -348,13 +347,13 @@ function InvoiceModal({ order, onClose }: { order: any; onClose: () => void }) {
     const payStatusColor = order.paymentStatus === "paid" ? "#15803d" : order.paymentStatus === "partial" ? "#b45309" : "#b91c1c";
     const payStatusBg = order.paymentStatus === "paid" ? "#f0fdf4" : order.paymentStatus === "partial" ? "#fffbeb" : "#fef2f2";
 
-    win.document.write(`<!DOCTYPE html><html><head>
+    const htmlContent = `<!DOCTYPE html><html><head>
       <meta charset="utf-8"/>
       <title>${invoiceNo}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; color: #111; background: #fff; }
-        @page { margin: 8mm 10mm; }
+        @page { size: 80mm auto; margin: 0; }
       </style>
     </head><body>
       <div style="padding:4px 8px;font-size:13px;color:#111;">
@@ -427,7 +426,17 @@ function InvoiceModal({ order, onClose }: { order: any; onClose: () => void }) {
           regarding this invoice.
         </div>
       </div>
-    </body></html>`);
+    </body></html>`;
+
+    toast({ title: "Printing..." });
+    const qzResult = await printHtmlWithQZ(htmlContent);
+    if (qzResult.success) return;
+
+    // QZ Tray unavailable — fall back to browser print dialog
+    toast({ title: "Print failed, opening dialog...", variant: "destructive" });
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(htmlContent);
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); win.close(); }, 400);

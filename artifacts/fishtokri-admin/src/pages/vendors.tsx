@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentAdminScope } from "@/lib/api";
+import { printHtmlWithQZ } from "@/lib/qz-print";
 import { ImageUpload } from "@/components/image-upload";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1698,7 +1699,7 @@ function AddPurchasePage({ vendor, onBack, onSaved }: {
     }
   };
 
-  const printInvoice = (purchase: any) => {
+  const printInvoice = async (purchase: any) => {
     const items = purchase?.items ?? [];
     const rows = items.map((it: any, i: number) => `
       <tr>
@@ -1750,15 +1751,22 @@ function AddPurchasePage({ vendor, onBack, onSaved }: {
         <div class="total"><span>Total</span><span>₹${Number(purchase?.totalAmount ?? totalAmount).toFixed(2)}</span></div>
       </div>
       ${purchase?.notes ? `<p class="muted" style="margin-top:16px"><strong>Notes:</strong> ${purchase.notes}</p>` : ""}
-      <script>window.onload=()=>{setTimeout(()=>window.print(),200)}</script>
       </body></html>`;
+
+    toast({ title: "Printing..." });
+    const qzResult = await printHtmlWithQZ(html);
+    if (qzResult.success) return;
+
+    // QZ Tray unavailable — fall back to browser print dialog
+    toast({ title: "Print failed, opening dialog...", variant: "destructive" });
+    const fallbackHtml = html + `<script>window.onload=()=>{setTimeout(()=>window.print(),200)}</script>`;
     const w = window.open("", "_blank", "width=900,height=700");
     if (!w) {
       toast({ title: "Pop-up blocked", description: "Allow pop-ups to print the invoice.", variant: "destructive" });
       return;
     }
     w.document.open();
-    w.document.write(html);
+    w.document.write(fallbackHtml);
     w.document.close();
   };
 
