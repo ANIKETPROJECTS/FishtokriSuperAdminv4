@@ -144,7 +144,14 @@ export default function InventoryProductDetail() {
       subHubName,
       superHubName,
       productName: product?.name ?? productName,
-      ...(b ? { batchId: b.id, batchNumber: b.batchNumber || "" } : {}),
+      ...(b
+        ? {
+            batchId: b.id,
+            batchNumber: b.batchNumber || "",
+            // Pass the batch creation time so usage page can filter to batch-era only
+            batchCreatedAt: b.createdAt ?? b.receivedDate ?? "",
+          }
+        : {}),
     });
     navigate(`/inventory/products/${productId}/usage?${usageParams.toString()}`);
   }

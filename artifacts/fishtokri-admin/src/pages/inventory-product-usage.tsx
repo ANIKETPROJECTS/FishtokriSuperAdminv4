@@ -97,6 +97,9 @@ export default function InventoryProductUsage() {
   const superHubName = qs.get("superHubName") ?? "Super Hub";
   const productName = qs.get("productName") ?? "Product";
   const batchNumber = qs.get("batchNumber") ?? "";
+  // If a specific batch was clicked, only show movements from that batch's creation time onward
+  const batchCreatedAt = qs.get("batchCreatedAt") ?? "";
+  const batchFromMs = batchCreatedAt ? new Date(batchCreatedAt).getTime() : null;
 
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +115,12 @@ export default function InventoryProductUsage() {
       .finally(() => setLoading(false));
   }, [subHubId, productId]);
 
-  const filtered = movements.filter((m) => {
+  // When viewing a specific batch, restrict to movements on/after that batch's creation date
+  const batchMovements = batchFromMs
+    ? movements.filter((m) => new Date(m.createdAt).getTime() >= batchFromMs)
+    : movements;
+
+  const filtered = batchMovements.filter((m) => {
     if (typeFilter !== "all" && m.type !== typeFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -125,19 +133,18 @@ export default function InventoryProductUsage() {
 
   const paged = usePaginated(filtered, 25, `${typeFilter}|${search}`);
 
-  // Summary stats
-  const totalDeducted = movements
+  // Summary stats — scoped to batchMovements (batch-specific if batchCreatedAt was passed)
+  const totalDeducted = batchMovements
     .filter((m) => m.type === "order_deduct")
     .reduce((s, m) => s + Math.abs(m.change), 0);
-  const totalRestored = movements
+  const totalRestored = batchMovements
     .filter((m) => m.type === "order_restore")
     .reduce((s, m) => s + Math.abs(m.change), 0);
-  const totalAdjusted = movements
+  const totalAdjusted = batchMovements
     .filter((m) => m.type === "adjustment")
     .reduce((s, m) => s + m.change, 0);
-  const netChange = movements.reduce((s, m) => s + m.change, 0);
 
-  const latestBalance = movements.length > 0 ? movements[0].balance : null;
+  const latestBalance = batchMovements.length > 0 ? batchMovements[0].balance : null;
 
   // Group by date for timeline labels
   function getDayLabel(iso: string) {
@@ -210,17 +217,33 @@ export default function InventoryProductUsage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-[#162B4D] text-base">{productName}</p>
-              <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                <Layers className="w-3 h-3" />
-                {batchNumber ? `Batch: ${batchNumber}` : "All batches"}
+              <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5 flex-wrap">
+                <Layers className="w-3 h-3 flex-shrink-0" />
+                {batchNumber ? (
+                  <span className="font-semibold text-[#162B4D]">Batch: {batchNumber}</span>
+                ) : (
+                  <span>All batches</span>
+                )}
                 <span className="mx-1 text-gray-200">·</span>
-                <Building2 className="w-3 h-3" />
+                <Building2 className="w-3 h-3 flex-shrink-0" />
                 {superHubName} → {subHubName}
               </p>
+              {batchCreatedAt && (
+                <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mt-2 inline-flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3 flex-shrink-0" />
+                  Showing movements from{" "}
+                  <span className="font-semibold">{fmtDate(batchCreatedAt)}</span> onwards
+                  {movements.length > batchMovements.length && (
+                    <span className="text-amber-500">
+                      · {movements.length - batchMovements.length} earlier movement{movements.length - batchMovements.length !== 1 ? "s" : ""} excluded
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
             {latestBalance !== null && (
-              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Current Balance</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-center flex-shrink-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Balance After Last Event</p>
                 <p className="text-xl font-bold text-[#162B4D]">{latestBalance}</p>
               </div>
             )}
@@ -234,7 +257,10 @@ export default function InventoryProductUsage() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Events</p>
               <SlidersHorizontal className="w-4 h-4 text-gray-300" />
             </div>
-            <p className="text-2xl font-bold text-[#162B4D]">{movements.length}</p>
+            <p className="text-2xl font-bold text-[#162B4D]">{batchMovements.length}</p>
+            {batchCreatedAt && movements.length !== batchMovements.length && (
+              <p className="text-[10px] text-gray-400 mt-0.5">{movements.length} total for product</p>
+            )}
           </div>
           <div className="bg-red-50 rounded-xl border border-red-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-1">
