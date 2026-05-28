@@ -1088,6 +1088,18 @@ export default function Orders() {
     setSelectedTimeslotId("");
   }, [selectedSubHubId]);
 
+  // Poll timeslot counts every 5 s while the create-order panel is open so
+  // full slots disappear automatically without a page refresh.
+  useEffect(() => {
+    if (!isCreatePage || !selectedSubHubId) return;
+    const id = setInterval(() => {
+      apiFetch(`/api/sub-hubs/${selectedSubHubId}/menu/timeslots`)
+        .then((d) => setTimeslots(d.timeslots ?? []))
+        .catch(() => {/* silent – keep existing list */});
+    }, 5000);
+    return () => clearInterval(id);
+  }, [isCreatePage, selectedSubHubId]);
+
   const activeCoupons = useMemo(() => {
     const now = Date.now();
     const customerActiveCoupons: any[] = chosenCustomer?.activeCoupons ?? [];
