@@ -1107,7 +1107,24 @@ export default function Orders() {
     return false;
   }, [selectedProducts, subHubProducts]);
 
-  const activeTimeslots = useMemo(() => timeslots.filter((t) => t.isActive !== false), [timeslots]);
+  const activeTimeslots = useMemo(() => {
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const isToday = orderDate === todayISO;
+    return timeslots.filter((t) => {
+      if (t.isActive === false) return false;
+      if (!isToday) return true;
+      const match = (t.startTime ?? "").match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (!match) return true;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      if (match[3].toUpperCase() === "PM" && h !== 12) h += 12;
+      if (match[3].toUpperCase() === "AM" && h === 12) h = 0;
+      const slotStartMins = h * 60 + m;
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      return slotStartMins > currentMins;
+    });
+  }, [timeslots, orderDate]);
 
   const productCategories = useMemo(() => {
     const map = new Map<string, number>();
