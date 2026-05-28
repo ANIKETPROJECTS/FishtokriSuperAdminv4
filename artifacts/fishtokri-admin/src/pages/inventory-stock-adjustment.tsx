@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Building2, Plus, Search, X, Trash2, ChevronDown, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Building2, Plus, Search, X, Trash2, ChevronDown, ChevronRight, SlidersHorizontal, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,8 +29,8 @@ function formatDateTime(iso: string) {
   return d.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-type SuperHub = { id: string; name: string };
-type SubHub = { id: string; name: string };
+type SuperHub = { id: string; name: string; location?: string };
+type SubHub = { id: string; name: string; location?: string };
 type Batch = { id: string; batchNumber: string; quantity: number; shelfLifeDays: number | null; receivedDate: string | null; expiryDate: string | null; notes: string };
 type Product = { id: string; name: string; category: string; unit: string; quantity: number; batches?: Batch[] };
 
@@ -96,6 +96,20 @@ function daysUntil(iso: string | null) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
   return Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function LockedHubBadge({ label, name, location }: { label: string; name: string; location?: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hidden sm:inline">{label}</span>
+      <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 min-w-0">
+        <Building2 className="w-3.5 h-3.5 text-[#364F9F] flex-shrink-0" />
+        <span className="text-sm font-semibold text-[#162B4D] truncate">{name}</span>
+        {location && <span className="text-[11px] text-gray-400 hidden md:inline truncate">· {location}</span>}
+        <Lock className="w-3 h-3 text-gray-300 flex-shrink-0 ml-0.5" />
+      </div>
+    </div>
+  );
 }
 
 function ProductSelector({
@@ -271,6 +285,8 @@ export default function InventoryStockAdjustment() {
   const [subHubs, setSubHubs] = useState<SubHub[]>([]);
   const [selectedSuperHubId, setSelectedSuperHubId] = useState("");
   const [selectedSubHubId, setSelectedSubHubId] = useState("");
+  const [selectedSuperHub, setSelectedSuperHub] = useState<SuperHub | null>(null);
+  const [selectedSubHub, setSelectedSubHub] = useState<SubHub | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
@@ -288,28 +304,55 @@ export default function InventoryStockAdjustment() {
       .catch((err) => toast({ title: "Failed to load super hubs", description: err.message, variant: "destructive" }));
   }, [toast]);
 
+  const adminScope = useMemo(() => getCurrentAdminScope(), []);
+
+  // Auto-select + lock to Mumbai
   useEffect(() => {
-    if (!selectedSuperHubId) { setSubHubs([]); setSelectedSubHubId(""); return; }
+    if (!superHubs.length) return;
+    const mumbai = superHubs.find((h) => h.name.toLowerCase().includes("mumbai"));
+    if (mumbai && !selectedSuperHubId) {
+      setSelectedSuperHubId(mumbai.id);
+      setSelectedSuperHub(mumbai);
+      return;
+    }
+    if (selectedSuperHubId) return;
+    if (adminScope.role === "super_hub" && superHubs.length === 1) {
+      setSelectedSuperHubId(superHubs[0].id);
+      setSelectedSuperHub(superHubs[0]);
+    }
+  }, [superHubs]);
+
+  useEffect(() => {
+    if (!selectedSuperHubId) { setSubHubs([]); setSelectedSubHubId(""); setSelectedSuperHub(null); return; }
+    const sh = superHubs.find((h) => h.id === selectedSuperHubId);
+    if (sh) setSelectedSuperHub(sh);
     apiFetch(`/api/super-hubs/${selectedSuperHubId}/sub-hubs`)
       .then((d) => setSubHubs(d.subHubs ?? []))
       .catch((err) => toast({ title: "Failed to load sub hubs", description: err.message, variant: "destructive" }));
     setSelectedSubHubId("");
+    setSelectedSubHub(null);
   }, [selectedSuperHubId, toast]);
 
-  // Auto-select hub for super_hub users when only one option is available.
-  const adminScope = useMemo(() => getCurrentAdminScope(), []);
+  // Auto-select + lock to Thane
   useEffect(() => {
-    if (selectedSuperHubId) return;
-    if (adminScope.role !== "super_hub") return;
-    if (superHubs.length !== 1) return;
-    setSelectedSuperHubId(superHubs[0].id);
-  }, [superHubs, selectedSuperHubId, adminScope]);
-  useEffect(() => {
+    if (!subHubs.length) return;
+    const thane = subHubs.find((h) => h.name.toLowerCase().includes("thane"));
+    if (thane && !selectedSubHubId) {
+      setSelectedSubHubId(thane.id);
+      setSelectedSubHub(thane);
+      return;
+    }
     if (selectedSubHubId) return;
-    if (adminScope.role !== "super_hub") return;
-    if (subHubs.length !== 1) return;
-    setSelectedSubHubId(subHubs[0].id);
-  }, [subHubs, selectedSubHubId, adminScope]);
+    if (adminScope.role === "super_hub" && subHubs.length === 1) {
+      setSelectedSubHubId(subHubs[0].id);
+      setSelectedSubHub(subHubs[0]);
+    }
+  }, [subHubs]);
+
+  useEffect(() => {
+    const sh = subHubs.find((h) => h.id === selectedSubHubId);
+    if (sh) setSelectedSubHub(sh);
+  }, [selectedSubHubId, subHubs]);
 
   function reload() {
     if (!selectedSubHubId) { setProducts([]); setAdjustments([]); return; }
@@ -361,7 +404,6 @@ export default function InventoryStockAdjustment() {
     updateRow(i, { shelfLifeDays: val, expiryDate: expiry });
   }
   function setExpiryDate(i: number, val: string) {
-    // user-overridden expiry: clear shelfLifeDays so it doesn't conflict
     updateRow(i, { expiryDate: val, shelfLifeDays: "" });
   }
 
@@ -374,7 +416,6 @@ export default function InventoryStockAdjustment() {
     );
     if (validRows.length === 0) { toast({ title: "Add at least one product with a quantity", variant: "destructive" }); return; }
     if (!formReason.trim()) { toast({ title: "Reason is required", variant: "destructive" }); return; }
-    // Require shelf-life or expiry on every "add" row
     const missingExpiry = validRows.find((r) => r.mode === "add" && !r.shelfLifeDays && !r.expiryDate);
     if (missingExpiry) {
       toast({ title: "Set shelf life or expiry", description: `Add shelf life (days) or an expiry date for ${missingExpiry.productName}.`, variant: "destructive" });
@@ -419,289 +460,296 @@ export default function InventoryStockAdjustment() {
 
   const usedIds = useMemo(() => new Set(formRows.map((r) => r.productId).filter(Boolean)), [formRows]);
 
+  // Header portal content
+  const headerSlot = document.getElementById("page-header-slot");
+  const headerContent = (
+    <div className="flex items-center justify-between w-full gap-4 min-w-0">
+      <div className="min-w-0 flex-shrink-0">
+        <p className="text-sm font-bold text-[#162B4D] leading-tight">
+          {view === "form" ? "Add Stock Adjustment" : "Inventory Stock Adjustment"}
+        </p>
+        <p className="text-[11px] text-gray-400 leading-tight hidden sm:block">Adjust quantities for multiple products at once.</p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {selectedSuperHub && (
+          <LockedHubBadge label="Super Hub" name={selectedSuperHub.name} location={selectedSuperHub.location} />
+        )}
+        {selectedSuperHub && selectedSubHub && (
+          <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+        )}
+        {selectedSubHub && (
+          <LockedHubBadge label="Sub Hub" name={selectedSubHub.name} location={selectedSubHub.location} />
+        )}
+        <div className="hidden">
+          <Select value={selectedSuperHubId} onValueChange={setSelectedSuperHubId}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {superHubs.map((h) => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={selectedSubHubId} onValueChange={setSelectedSubHubId}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {subHubs.map((h) => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+
   // ─── FORM VIEW ──────────────────────────────────────────────────────────────
   if (view === "form") {
     return (
-      <div className="space-y-5">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setView("list")} className="text-sm text-gray-500 hover:text-gray-800">← Back</button>
-          <h1 className="text-xl font-bold text-[#162B4D]">Add Stock Adjustment</h1>
+      <>
+        {headerSlot && createPortal(headerContent, headerSlot)}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setView("list")} className="text-sm text-gray-500 hover:text-gray-800">← Back to list</button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</Label>
+                <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason <span className="text-red-500">*</span></Label>
+                <Input
+                  value={formReason}
+                  onChange={(e) => setFormReason(e.target.value)}
+                  placeholder="Enter reason"
+                  className="h-9"
+                  list="inv-reason-list"
+                />
+                <datalist id="inv-reason-list">{REASONS.map((r) => <option key={r} value={r} />)}</datalist>
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</Label>
+                <Input value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Write notes here..." className="h-9" />
+              </div>
+            </div>
+
+            <div className="w-full overflow-x-auto rounded-lg border border-gray-100">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[26%]">Product <span className="text-red-500">*</span></th>
+                    <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[8%]">Avail.</th>
+                    <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Mode</th>
+                    <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Quantity</th>
+                    <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[12%]">Shelf Life (days)</th>
+                    <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[14%]">Expiry Date</th>
+                    <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[12%]">Batch # (opt)</th>
+                    <th className="px-2 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {formRows.map((row, idx) => {
+                    const isAdd = row.mode === "add";
+                    const dLeft = isAdd ? daysUntil(row.expiryDate) : null;
+                    const expTone = dLeft == null ? "text-gray-400"
+                      : dLeft < 0 ? "text-red-600"
+                      : dLeft <= 7 ? "text-amber-600"
+                      : "text-emerald-600";
+                    return (
+                      <Fragment key={idx}>
+                        <tr className="hover:bg-gray-50/40 align-top">
+                          <td className="px-3 py-2.5">
+                            <ProductSelector
+                              row={row} idx={idx} allProducts={products} usedIds={usedIds}
+                              onSelect={selectProduct} onClear={clearProduct} onSearchChange={onSearchChange}
+                            />
+                            {row.unit && <p className="text-[10px] text-gray-400 mt-1">{row.unit}</p>}
+                          </td>
+                          <td className="px-2 py-2.5 text-sm text-gray-700">
+                            {row.productId ? row.quantityBefore : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <Select value={row.mode} onValueChange={(v) => updateRow(idx, { mode: v as FormMode })}>
+                              <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="add">Add Batch</SelectItem>
+                                <SelectItem value="remove">Reduce</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <input
+                              type="number" min="0"
+                              value={isAdd ? row.addQuantity : row.removeQuantity}
+                              onChange={(e) => updateRow(idx, isAdd ? { addQuantity: e.target.value } : { removeQuantity: e.target.value })}
+                              placeholder="0"
+                              className="w-full h-9 px-2 text-sm text-center border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                            />
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <input
+                              type="number" min="0"
+                              value={isAdd ? row.shelfLifeDays : ""}
+                              disabled={!isAdd}
+                              onChange={(e) => setShelfLife(idx, e.target.value)}
+                              placeholder={isAdd ? "e.g. 7" : "—"}
+                              className="w-full h-9 px-2 text-sm text-center border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-300"
+                            />
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <input
+                              type="date"
+                              value={isAdd ? row.expiryDate : ""}
+                              disabled={!isAdd}
+                              onChange={(e) => setExpiryDate(idx, e.target.value)}
+                              className={`w-full h-9 px-2 text-xs border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-300 ${expTone}`}
+                            />
+                            {isAdd && dLeft != null && (
+                              <p className={`text-[10px] mt-0.5 font-semibold ${expTone}`}>
+                                {dLeft < 0 ? `Expired ${Math.abs(dLeft)}d ago` : dLeft === 0 ? "Expires today" : `${dLeft}d left`}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <input
+                              type="text"
+                              value={isAdd ? row.batchNumber : ""}
+                              disabled={!isAdd}
+                              onChange={(e) => updateRow(idx, { batchNumber: e.target.value })}
+                              placeholder={isAdd ? "auto" : "—"}
+                              className="w-full h-9 px-2 text-xs border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-300"
+                            />
+                          </td>
+                          <td className="px-2 py-2.5 text-center">
+                            {formRows.length > 1 && (
+                              <button onClick={() => removeRow(idx)} className="text-gray-400 hover:text-red-500">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {row.productId && (() => {
+                          const prod = products.find((p) => p.id === row.productId);
+                          const batches = prod?.batches ?? [];
+                          if (batches.length === 0) return null;
+                          return (
+                            <tr key={`${idx}-batches`} className="bg-gray-50/40">
+                              <td colSpan={8} className="px-4 py-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Existing batches:</span>
+                                  {batches.map((b) => {
+                                    const dl = daysUntil(b.expiryDate);
+                                    const tone = dl == null ? "bg-gray-100 text-gray-600 border-gray-200"
+                                      : dl < 0 ? "bg-red-50 text-red-700 border-red-200"
+                                      : dl <= 7 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                                    return (
+                                      <span key={b.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${tone}`}>
+                                        {b.batchNumber || "Batch"} · {b.quantity}{prod?.unit ? "" : ""} · exp {formatExpiry(b.expiryDate)}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })()}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button onClick={addRow} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1A56DB] hover:underline">
+                <Plus className="w-4 h-4" /> Add another product
+              </button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setView("list")}>Cancel</Button>
+                <Button onClick={handleSave} disabled={saving} className="bg-[#1A56DB] hover:bg-[#1647b8]">
+                  {saving ? "Saving..." : "Save Adjustment"}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</Label>
-              <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="h-9" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason <span className="text-red-500">*</span></Label>
-              <Input
-                value={formReason}
-                onChange={(e) => setFormReason(e.target.value)}
-                placeholder="Enter reason"
-                className="h-9"
-                list="inv-reason-list"
-              />
-              <datalist id="inv-reason-list">{REASONS.map((r) => <option key={r} value={r} />)}</datalist>
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</Label>
-              <Input value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Write notes here..." className="h-9" />
-            </div>
-          </div>
-
-          <div className="w-full overflow-x-auto rounded-lg border border-gray-100">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[26%]">Product <span className="text-red-500">*</span></th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[8%]">Avail.</th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Mode</th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Quantity</th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[12%]">Shelf Life (days)</th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[14%]">Expiry Date</th>
-                  <th className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[12%]">Batch # (opt)</th>
-                  <th className="px-2 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {formRows.map((row, idx) => {
-                  const isAdd = row.mode === "add";
-                  const dLeft = isAdd ? daysUntil(row.expiryDate) : null;
-                  const expTone = dLeft == null ? "text-gray-400"
-                    : dLeft < 0 ? "text-red-600"
-                    : dLeft <= 7 ? "text-amber-600"
-                    : "text-emerald-600";
-                  return (
-                    <Fragment key={idx}>
-                      <tr className="hover:bg-gray-50/40 align-top">
-                        <td className="px-3 py-2.5">
-                          <ProductSelector
-                            row={row} idx={idx} allProducts={products} usedIds={usedIds}
-                            onSelect={selectProduct} onClear={clearProduct} onSearchChange={onSearchChange}
-                          />
-                          {row.unit && <p className="text-[10px] text-gray-400 mt-1">{row.unit}</p>}
-                        </td>
-                        <td className="px-2 py-2.5 text-sm text-gray-700">
-                          {row.productId ? row.quantityBefore : <span className="text-gray-300">—</span>}
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <Select value={row.mode} onValueChange={(v) => updateRow(idx, { mode: v as FormMode })}>
-                            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="add">Add Batch</SelectItem>
-                              <SelectItem value="remove">Reduce</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <input
-                            type="number" min="0"
-                            value={isAdd ? row.addQuantity : row.removeQuantity}
-                            onChange={(e) => updateRow(idx, isAdd ? { addQuantity: e.target.value } : { removeQuantity: e.target.value })}
-                            placeholder="0"
-                            className="w-full h-9 px-2 text-sm text-center border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
-                          />
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <input
-                            type="number" min="0"
-                            value={isAdd ? row.shelfLifeDays : ""}
-                            disabled={!isAdd}
-                            onChange={(e) => setShelfLife(idx, e.target.value)}
-                            placeholder={isAdd ? "e.g. 7" : "—"}
-                            className="w-full h-9 px-2 text-sm text-center border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-300"
-                          />
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <input
-                            type="date"
-                            value={isAdd ? row.expiryDate : ""}
-                            disabled={!isAdd}
-                            onChange={(e) => setExpiryDate(idx, e.target.value)}
-                            className={`w-full h-9 px-2 text-xs border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-300 ${expTone}`}
-                          />
-                          {isAdd && dLeft != null && (
-                            <p className={`text-[10px] mt-0.5 font-semibold ${expTone}`}>
-                              {dLeft < 0 ? `Expired ${Math.abs(dLeft)}d ago` : dLeft === 0 ? "Expires today" : `${dLeft}d left`}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <input
-                            type="text"
-                            value={isAdd ? row.batchNumber : ""}
-                            disabled={!isAdd}
-                            onChange={(e) => updateRow(idx, { batchNumber: e.target.value })}
-                            placeholder={isAdd ? "auto" : "—"}
-                            className="w-full h-9 px-2 text-xs border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-300"
-                          />
-                        </td>
-                        <td className="px-2 py-2.5 text-center">
-                          {formRows.length > 1 && (
-                            <button onClick={() => removeRow(idx)} className="text-gray-400 hover:text-red-500">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                      {row.productId && (() => {
-                        const prod = products.find((p) => p.id === row.productId);
-                        const batches = prod?.batches ?? [];
-                        if (batches.length === 0) return null;
-                        return (
-                          <tr key={`${idx}-batches`} className="bg-gray-50/40">
-                            <td colSpan={8} className="px-4 py-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Existing batches:</span>
-                                {batches.map((b) => {
-                                  const dl = daysUntil(b.expiryDate);
-                                  const tone = dl == null ? "bg-gray-100 text-gray-600 border-gray-200"
-                                    : dl < 0 ? "bg-red-50 text-red-700 border-red-200"
-                                    : dl <= 7 ? "bg-amber-50 text-amber-700 border-amber-200"
-                                    : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                                  return (
-                                    <span key={b.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${tone}`}>
-                                      {b.batchNumber || "Batch"} · {b.quantity}{prod?.unit ? "" : ""} · exp {formatExpiry(b.expiryDate)}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })()}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <button onClick={addRow} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1A56DB] hover:underline">
-              <Plus className="w-4 h-4" /> Add another product
-            </button>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setView("list")}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving} className="bg-[#1A56DB] hover:bg-[#1647b8]">
-                {saving ? "Saving..." : "Save Adjustment"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      </>
     );
   }
 
   // ─── LIST VIEW ──────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#162B4D]">Inventory Stock Adjustment</h1>
-          <p className="text-sm text-gray-500">Adjust quantities for multiple products at once.</p>
+    <>
+      {headerSlot && createPortal(headerContent, headerSlot)}
+      <div className="space-y-5">
+        <div className="flex items-center justify-end">
+          <Button onClick={openForm} disabled={!selectedSubHubId} className="bg-[#1A56DB] hover:bg-[#1647b8]">
+            <Plus className="w-4 h-4 mr-1.5" /> New Adjustment
+          </Button>
         </div>
-        <Button onClick={openForm} disabled={!selectedSubHubId} className="bg-[#1A56DB] hover:bg-[#1647b8]">
-          <Plus className="w-4 h-4 mr-1.5" /> New Adjustment
-        </Button>
-      </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Super Hub</Label>
-            <Select value={selectedSuperHubId} onValueChange={setSelectedSuperHubId}>
-              <SelectTrigger className="h-10"><SelectValue placeholder="Select super hub" /></SelectTrigger>
-              <SelectContent>
-                {superHubs.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-gray-400" />{h.name}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {!selectedSubHubId ? (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-50 flex items-center justify-center">
+              <SlidersHorizontal className="w-5 h-5 text-[#1A56DB]" />
+            </div>
+            <p className="text-sm font-semibold text-[#162B4D]">Loading hub data...</p>
+            <p className="text-xs text-gray-400 mt-1">Connecting to Mumbai · Thane inventory.</p>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sub Hub</Label>
-            <Select value={selectedSubHubId} onValueChange={setSelectedSubHubId} disabled={!selectedSuperHubId}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder={!selectedSuperHubId ? "Select super hub first" : "Select sub hub"} />
-              </SelectTrigger>
-              <SelectContent>
-                {subHubs.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-gray-400" />{h.name}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {!selectedSubHubId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-50 flex items-center justify-center">
-            <SlidersHorizontal className="w-5 h-5 text-[#1A56DB]" />
-          </div>
-          <p className="text-sm font-semibold text-[#162B4D]">Select a sub hub to manage adjustments</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">Loading...</td></tr>
-                ) : adjustments.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">No adjustments yet</td></tr>
-                ) : pagedAdjustments.pageItems.map((a) => (
-                  <tr key={a._id} className="hover:bg-gray-50/40 align-top">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDateTime(a.createdAt || a.date)}</td>
-                    <td className="px-4 py-3 font-medium text-[#162B4D]">{a.reason}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        {a.items.map((it, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs flex-wrap">
-                            <span className="text-gray-700 font-medium">{it.productName}</span>
-                            <span className="text-gray-400">{it.quantityBefore} → {it.newQuantity} {it.unit}</span>
-                            <span className={`font-semibold ${it.quantityAdjusted > 0 ? "text-emerald-600" : it.quantityAdjusted < 0 ? "text-red-600" : "text-gray-400"}`}>
-                              ({it.quantityAdjusted > 0 ? "+" : ""}{it.quantityAdjusted})
-                            </span>
-                            {it.batch?.expiryDate && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                {it.batch.batchNumber || "Batch"} · exp {formatExpiry(it.batch.expiryDate as any)}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{a.notes || <span className="text-gray-300">—</span>}</td>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <PaginationBar
-              page={pagedAdjustments.page}
-              pages={pagedAdjustments.pages}
-              total={pagedAdjustments.total}
-              onChange={pagedAdjustments.setPage}
-              label="adjustments"
-            />
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">Loading...</td></tr>
+                  ) : adjustments.length === 0 ? (
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">No adjustments yet</td></tr>
+                  ) : pagedAdjustments.pageItems.map((a) => (
+                    <tr key={a._id} className="hover:bg-gray-50/40 align-top">
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDateTime(a.createdAt || a.date)}</td>
+                      <td className="px-4 py-3 font-medium text-[#162B4D]">{a.reason}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {a.items.map((it, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs flex-wrap">
+                              <span className="text-gray-700 font-medium">{it.productName}</span>
+                              <span className="text-gray-400">{it.quantityBefore} → {it.newQuantity} {it.unit}</span>
+                              <span className={`font-semibold ${it.quantityAdjusted > 0 ? "text-emerald-600" : it.quantityAdjusted < 0 ? "text-red-600" : "text-gray-400"}`}>
+                                ({it.quantityAdjusted > 0 ? "+" : ""}{it.quantityAdjusted})
+                              </span>
+                              {it.batch?.expiryDate && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                  {it.batch.batchNumber || "Batch"} · exp {formatExpiry(it.batch.expiryDate as any)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{a.notes || <span className="text-gray-300">—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <PaginationBar
+                page={pagedAdjustments.page}
+                pages={pagedAdjustments.pages}
+                total={pagedAdjustments.total}
+                onChange={pagedAdjustments.setPage}
+                label="adjustments"
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }

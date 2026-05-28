@@ -28,6 +28,7 @@ import InventoryPage from "@/pages/inventory";
 import InventoryOverview from "@/pages/inventory-overview";
 import InventoryHistoryPage from "@/pages/inventory-history";
 import InventoryStockAdjustmentPage from "@/pages/inventory-stock-adjustment";
+import InventoryProductDetail from "@/pages/inventory-product-detail";
 import BankingOverview from "@/pages/banking-overview";
 import BankingAccounts from "@/pages/banking-accounts";
 import BankingReceipts from "@/pages/banking-receipts";
@@ -193,6 +194,9 @@ function App() {
             </Route>
             <Route path="/inventory/adjustment">
               <ProtectedRoute component={InventoryStockAdjustmentPage} allowedRoles={ALL_ADMIN_ROLES} />
+            </Route>
+            <Route path="/inventory/products/:productId">
+              <ProtectedRoute component={InventoryProductDetail} allowedRoles={ALL_ADMIN_ROLES} />
             </Route>
 
             {/* Banking — Master Admin & Super Hub */}
