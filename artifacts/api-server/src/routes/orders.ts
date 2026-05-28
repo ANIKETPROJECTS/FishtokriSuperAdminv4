@@ -88,9 +88,17 @@ async function syncTimeslotOrderLimit(subHubId: string | undefined, timeslotId: 
     const orderLimit = Number(timeslot.orderLimit) || 0;
     if (orderLimit <= 0) return;
     const ordersConn = await getOrdersDb();
+    const todayISO = getTodayISODate();
     const activeCount = await ordersConn.db.collection(COLLECTION).countDocuments({
+      subHubId: subHubId,
       timeslotId: timeslotId,
       status: { $ne: "cancelled" },
+      $or: [
+        { deliveryDate: todayISO },
+        { deliveryDate: null },
+        { deliveryDate: "" },
+        { deliveryDate: { $exists: false } },
+      ],
     });
     const isLimited = activeCount >= orderLimit;
     const wasLimited = timeslot.limitedByOrders === true;
