@@ -71,47 +71,6 @@ async function getOrdersDb() {
   return getSubHubDbConnection(ORDERS_DB);
 }
 
-/**
- * Increment (+1) or decrement (-1) the timeslot order counter for a specific delivery date.
- * - deliveryDate === today  → todaysOrderDate / todaysOrderCount
- * - deliveryDate !== today  → nextDayOrderDate / nextDayOrderCount
- * No-ops silently on any error so it never blocks order flow.
- */
-async function adjustTimeslotOrderCount(
-  subHubName: string,
-  timeslotId: string,
-  deliveryDate: string,
-  delta: 1 | -1,
-  log: any,
-) {
-  if (!subHubName || !timeslotId || !deliveryDate) return;
-  try {
-    const tOid = toId(timeslotId);
-    if (!tOid) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const isToday = deliveryDate === today;
-    const dateField  = isToday ? "todaysOrderDate"  : "nextDayOrderDate";
-    const countField = isToday ? "todaysOrderCount" : "nextDayOrderCount";
-    const conn = await getSubHubDbConnection(subHubName);
-    const col = conn.db.collection("timeslots");
-    if (delta === 1) {
-      const slot = await col.findOne({ _id: tOid }, { projection: { [dateField]: 1 } });
-      if (slot && slot[dateField] === deliveryDate) {
-        await col.updateOne({ _id: tOid }, { $inc: { [countField]: 1 } });
-      } else {
-        await col.updateOne({ _id: tOid }, { $set: { [dateField]: deliveryDate, [countField]: 1 } });
-      }
-    } else {
-      // Only decrement when the stored date still matches and count is > 0
-      await col.updateOne(
-        { _id: tOid, [dateField]: deliveryDate, [countField]: { $gt: 0 } },
-        { $inc: { [countField]: -1 } },
-      );
-    }
-  } catch (e) {
-    log?.warn({ err: e, timeslotId, deliveryDate, delta }, "adjustTimeslotOrderCount: failed (non-fatal)");
-  }
-}
 
 function toId(id: string): mongoose.mongo.BSON.ObjectId | null {
   try { return new mongoose.mongo.ObjectId(id); } catch { return null; }
@@ -1113,11 +1072,6 @@ router.post("/", async (req: ScopedRequest, res) => {
       req.log.error({ err: e }, "Failed to sync inventory on order create");
     }
 
-    // Increment timeslot order count for active slotted delivery orders.
-    if (orderDoc.scheduleType === "slot" && orderDoc.timeslotId && orderDoc.subHubName && orderDoc.status !== "cancelled") {
-      await adjustTimeslotOrderCount(String(orderDoc.subHubName), String(orderDoc.timeslotId), String(orderDoc.deliveryDate ?? ""), 1, req.log);
-    }
-
     // Mirror order payments into banking ▸ payments so the ledger stays in sync.
     if (Array.isArray(orderDoc.payments) && orderDoc.payments.length > 0) {
       try {
@@ -1446,20 +1400,6 @@ router.put("/:id", async (req: ScopedRequest, res) => {
         }
       } catch (e) {
         req.log.error({ err: e }, "Failed to update wallet on order status transition");
-      }
-    }
-
-    // Adjust timeslot order counts when an order is cancelled or un-cancelled.
-    if (
-      status !== undefined && String(status) !== String(prev.status ?? "") &&
-      prev.scheduleType === "slot" && prev.timeslotId && prev.subHubName && prev.deliveryDate
-    ) {
-      const prevStatus = String(prev.status ?? "");
-      const newStatus  = String(status);
-      if (newStatus === "cancelled" && prevStatus !== "cancelled") {
-        await adjustTimeslotOrderCount(String(prev.subHubName), String(prev.timeslotId), String(prev.deliveryDate), -1, req.log);
-      } else if (prevStatus === "cancelled" && newStatus !== "cancelled") {
-        await adjustTimeslotOrderCount(String(prev.subHubName), String(prev.timeslotId), String(prev.deliveryDate), 1, req.log);
       }
     }
 

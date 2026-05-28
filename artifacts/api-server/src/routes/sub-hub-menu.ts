@@ -930,11 +930,84 @@ router.delete("/pincodes/:pincodeId", async (req, res) => {
 });
 
 // ─── TIMESLOTS ─────────────────────────────────────────────────────────────────
+
+/** Returns today's date in YYYY-MM-DD format using IST (UTC+5:30). */
+function getTimeslotTodayISO(): string {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(ist.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Returns tomorrow's date in YYYY-MM-DD format using IST (UTC+5:30). */
+function getTimeslotTomorrowISO(): string {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  ist.setUTCDate(ist.getUTCDate() + 1);
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(ist.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 router.get("/timeslots", async (req, res) => {
   try {
     const ctx = await getSubHubDb(req.params.id, res, req as ScopedRequest);
     if (!ctx) return;
     const timeslots = await ctx.conn.db.collection("timeslots").find({}).sort({ sortOrder: 1, startTime: 1 }).toArray();
+
+    if (timeslots.length > 0) {
+      const todayISO = getTimeslotTodayISO();
+      const tomorrowISO = getTimeslotTomorrowISO();
+      const timeslotIdStrs = timeslots.map((t: any) => String(t._id));
+      try {
+        const ordersConn = await getSubHubDbConnection("orders");
+        const countsAgg = await ordersConn.db.collection("orders").aggregate([
+          {
+            $match: {
+              timeslotId: { $in: timeslotIdStrs },
+              scheduleType: "slot",
+              deliveryDate: { $in: [todayISO, tomorrowISO] },
+              status: { $ne: "cancelled" },
+            },
+          },
+          {
+            $group: {
+              _id: { timeslotId: "$timeslotId", deliveryDate: "$deliveryDate" },
+              count: { $sum: 1 },
+            },
+          },
+        ]).toArray();
+
+        const countMap = new Map<string, { today: number; tomorrow: number }>();
+        for (const row of countsAgg as any[]) {
+          const tid = String(row._id.timeslotId);
+          const date = String(row._id.deliveryDate);
+          if (!countMap.has(tid)) countMap.set(tid, { today: 0, tomorrow: 0 });
+          const entry = countMap.get(tid)!;
+          if (date === todayISO) entry.today = row.count;
+          else if (date === tomorrowISO) entry.tomorrow = row.count;
+        }
+
+        for (const slot of timeslots as any[]) {
+          const counts = countMap.get(String(slot._id)) ?? { today: 0, tomorrow: 0 };
+          slot.todaysOrderCount = counts.today;
+          slot.nextDayOrderCount = counts.tomorrow;
+          delete slot.todaysOrderDate;
+          delete slot.nextDayOrderDate;
+        }
+      } catch (e) {
+        req.log.warn({ err: e }, "Failed to compute timeslot order counts (non-fatal)");
+        for (const slot of timeslots as any[]) {
+          slot.todaysOrderCount = slot.todaysOrderCount ?? 0;
+          slot.nextDayOrderCount = slot.nextDayOrderCount ?? 0;
+          delete slot.todaysOrderDate;
+          delete slot.nextDayOrderDate;
+        }
+      }
+    }
 
     res.json({ timeslots, total: timeslots.length });
   } catch (err) {
@@ -959,11 +1032,6 @@ router.post("/timeslots", async (req, res) => {
       isActive: isActive !== false,
       sortOrder: Number(sortOrder) || 0,
       orderLimit: Number(orderLimit) || 0,
-      limitedByOrders: false,
-      todaysOrderDate: "",
-      todaysOrderCount: 0,
-      nextDayOrderDate: "",
-      nextDayOrderCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
