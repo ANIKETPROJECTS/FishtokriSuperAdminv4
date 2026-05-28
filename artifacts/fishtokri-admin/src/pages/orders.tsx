@@ -280,28 +280,140 @@ function InvoiceModal({ order, onClose }: { order: any; onClose: () => void }) {
     order.paymentStatus === "partial" ? "Partial" : "Unpaid";
 
   const handlePrint = () => {
-    const area = document.getElementById("invoice-print-area");
-    if (!area) return;
     const win = window.open("", "_blank");
     if (!win) return;
-    win.document.write(`<html><head><title>${invoiceNo}</title><style>
-      *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-      body{padding:28px;color:#111;font-size:13px}
-      h2{text-align:center;font-size:15px;margin-bottom:3px}
-      .sub{text-align:center;font-size:12px;color:#555;margin-bottom:14px}
-      .row{display:flex;justify-content:space-between;margin:2px 0;font-size:12px}
-      .dash{border-top:1px dashed #aaa;margin:10px 0}
-      table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}
-      th{border-bottom:1px solid #ccc;padding:4px 2px;text-align:left;font-weight:600}
-      td{padding:4px 2px}
-      .tr{font-weight:600}
-      .grand{display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin:4px 0}
-      .words{text-align:center;font-style:italic;font-size:11px;color:#555;margin:4px 0 10px}
-      .thanks{text-align:center;font-size:11px;color:#555;line-height:1.7;margin-top:14px}
-    </style></head><body>${area.innerHTML}</body></html>`);
+
+    const itemRows = items.map((it: any) => {
+      const qty = Number(it.quantity) || 1;
+      const rate = Number(it.price) || 0;
+      return `
+        <tr>
+          <td style="padding:5px 4px;border-bottom:1px solid #eee;">${it.name}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #eee;text-align:right;">${qty}${it.unit ? ` ${it.unit}` : ""}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #eee;text-align:right;">${rate.toFixed(2)}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #eee;text-align:right;">${(qty * rate).toFixed(2)}</td>
+        </tr>`;
+    }).join("");
+
+    const walletRow = walletInvAmt > 0 ? `
+      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:13px;">
+        <span>Wallet Applied:</span><span>− ${walletInvAmt.toFixed(2)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:14px;font-weight:700;">
+        <span>Balance Due (Cash/UPI):</span><span>${Math.max(0, grandTotal - walletInvAmt).toFixed(2)}</span>
+      </div>` : "";
+
+    const paidDueRow = (order.paidAmount !== undefined || order.dueAmount !== undefined) ? `
+      <div style="display:flex;justify-content:space-between;margin:8px 0 0;font-size:12px;">
+        <span>Paid: <strong style="color:#16a34a;">₹${paidAmt.toFixed(2)}</strong></span>
+        <span>Due: <strong style="color:${dueAmt > 0 ? "#ef4444" : "#16a34a"};">₹${dueAmt.toFixed(2)}</strong></span>
+      </div>` : "";
+
+    const notesRow = order.notes ? `
+      <div style="border-top:1px dashed #bbb;margin:10px 0;"></div>
+      <div style="font-size:12px;"><b>Note:</b> ${order.notes}</div>` : "";
+
+    const slotRow = slotCharge > 0 ? `
+      <tr>
+        <td style="padding:4px 2px;" colspan="3">Slot Charge :</td>
+        <td style="padding:4px 2px;text-align:right;">+ ${slotCharge.toFixed(2)}</td>
+      </tr>` : "";
+
+    const deliveryRow = deliveryCharge > 0 ? `
+      <tr>
+        <td style="padding:4px 2px;" colspan="3">Delivery Charge :</td>
+        <td style="padding:4px 2px;text-align:right;">+ ${deliveryCharge.toFixed(2)}</td>
+      </tr>` : "";
+
+    const payStatusColor = order.paymentStatus === "paid" ? "#15803d" : order.paymentStatus === "partial" ? "#b45309" : "#b91c1c";
+    const payStatusBg = order.paymentStatus === "paid" ? "#f0fdf4" : order.paymentStatus === "partial" ? "#fffbeb" : "#fef2f2";
+
+    win.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8"/>
+      <title>${invoiceNo}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; color: #111; background: #fff; }
+        @media print {
+          body { margin: 0; }
+          @page { margin: 16mm 12mm; size: A5 portrait; }
+        }
+      </style>
+    </head><body>
+      <div style="max-width:400px;margin:24px auto;padding:20px;font-size:13px;color:#111;">
+
+        <h2 style="text-align:center;font-size:16px;font-weight:700;margin-bottom:2px;">
+          Fishtokri${order.superHubName ? ` - ${order.superHubName}` : ""}
+        </h2>
+        <div style="border-top:1px dashed #999;margin:8px 0;"></div>
+        <div style="text-align:center;font-size:12px;color:#555;margin-bottom:8px;">Mobile No: ${order.phone || "—"}</div>
+
+        <div style="display:flex;justify-content:space-between;margin:3px 0;font-size:12px;">
+          <span><b>Invoice No:</b> ${invoiceNo}</span>
+          <span><b>Date:</b> ${dateStr}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:3px 0;font-size:12px;">
+          <span>
+            <b>Payment Mode:</b> ${payMode}
+            <span style="margin-left:5px;font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:20px;border:1px solid ${payStatusColor};color:${payStatusColor};background:${payStatusBg};">${payLabel}</span>
+          </span>
+          <span><b>Time:</b> ${timeStr}</span>
+        </div>
+
+        <div style="border-top:1px dashed #999;margin:8px 0;"></div>
+
+        <div style="font-size:12px;margin:2px 0;"><b>Name:</b> ${order.customerName}</div>
+        ${order.address ? `<div style="font-size:12px;margin:2px 0;"><b>Add :</b> ${order.address}</div>` : ""}
+
+        <div style="border-top:1px dashed #999;margin:8px 0;"></div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin:4px 0;">
+          <thead>
+            <tr style="border-bottom:1px solid #555;">
+              <th style="padding:5px 4px;text-align:left;font-weight:600;">Item</th>
+              <th style="padding:5px 4px;text-align:right;font-weight:600;">Qty</th>
+              <th style="padding:5px 4px;text-align:right;font-weight:600;">Rate</th>
+              <th style="padding:5px 4px;text-align:right;font-weight:600;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+            <tr style="border-top:1px solid #aaa;">
+              <td style="padding:5px 4px;font-weight:600;">Total Items: ${items.length}</td>
+              <td style="padding:5px 4px;text-align:right;font-weight:600;">${totalQty}</td>
+              <td></td>
+              <td style="padding:5px 4px;text-align:right;font-weight:600;">${subtotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 2px;" colspan="3">Discount${order.couponCode ? ` (${order.couponCode})` : ""} :</td>
+              <td style="padding:4px 2px;text-align:right;">- ${discount.toFixed(2)}</td>
+            </tr>
+            ${slotRow}
+            ${deliveryRow}
+          </tbody>
+        </table>
+
+        <div style="border-top:1px dashed #999;margin:8px 0;"></div>
+
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin:4px 0;">
+          <span>Grand Total:</span><span>${grandTotal.toFixed(2)}</span>
+        </div>
+        ${walletRow}
+        <div style="text-align:center;font-style:italic;font-size:11px;color:#555;margin:4px 0 8px;">( ${numberToWords(grandTotal)} )</div>
+        ${paidDueRow}
+        ${notesRow}
+
+        <div style="text-align:center;font-size:11px;color:#555;line-height:1.8;margin-top:14px;">
+          Thank you for your business!<br/>
+          We appreciate your prompt payment.<br/>
+          Please feel free to contact us if you have any questions<br/>
+          regarding this invoice.
+        </div>
+      </div>
+    </body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+    setTimeout(() => { win.print(); win.close(); }, 400);
   };
 
   return (
