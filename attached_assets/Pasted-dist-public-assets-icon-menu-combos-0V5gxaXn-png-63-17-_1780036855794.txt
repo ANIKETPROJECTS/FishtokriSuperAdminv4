@@ -1,0 +1,65 @@
+dist/public/assets/icon-menu-combos-0V5gxaXn.png          63.17 kB
+dist/public/assets/index-Dli-T1qY.css                    153.40 kB │ gzip:  24.77 kB
+dist/public/assets/purify.es-21m173o_.js                  22.71 kB │ gzip:   8.72 kB
+dist/public/assets/jspdf.plugin.autotable-KFqWVtFs.js     31.02 kB │ gzip:   9.89 kB
+dist/public/assets/index.es-BnjmqrfD.js                  158.83 kB │ gzip:  53.04 kB
+dist/public/assets/html2canvas.esm-DXEQVQnt.js           201.04 kB │ gzip:  47.43 kB
+dist/public/assets/jspdf.es.min-A4NcAYbZ.js              386.01 kB │ gzip: 126.32 kB
+dist/public/assets/index-CFrEfmTT.js                   3,141.23 kB │ gzip: 856.21 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.33s
+root@srv1708834:/var/www/fishtokri# pm2 restart fishtokri-api
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [fishtokri-api](ids: [ 0 ])
+[PM2] [fishtokri-api](0) ✓
+┌────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ fishtokri-api    │ default     │ 0.0.0   │ cluster │ 24642    │ 0s     │ 1    │ online    │ 0%       │ 40.3mb   │ root     │ disabled │
+└────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@srv1708834:/var/www/fishtokri# pm2 log 0
+[TAILING] Tailing last 15 lines for [0] process (change the value with --lines option)
+/root/.pm2/logs/fishtokri-api-out-0.log last 15 lines:
+0|fishtokr | {"level":30,"time":1780036823661,"pid":24642,"hostname":"srv1708834","msg":"Connected to MongoDB (fishtokri_admin)"}
+0|fishtokr | {"level":30,"time":1780036823665,"pid":24642,"hostname":"srv1708834","port":3015,"msg":"Server listening"}
+0|fishtokr | {"level":30,"time":1780036827820,"pid":24642,"hostname":"srv1708834","req":{"id":1,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":4,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036828714,"pid":24642,"hostname":"srv1708834","req":{"id":2,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036828914,"pid":24642,"hostname":"srv1708834","req":{"id":3,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036829102,"pid":24642,"hostname":"srv1708834","req":{"id":4,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036829302,"pid":24642,"hostname":"srv1708834","req":{"id":5,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036830515,"pid":24642,"hostname":"srv1708834","req":{"id":6,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036830674,"pid":24642,"hostname":"srv1708834","req":{"id":7,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036830867,"pid":24642,"hostname":"srv1708834","req":{"id":8,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036831050,"pid":24642,"hostname":"srv1708834","req":{"id":9,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036831226,"pid":24642,"hostname":"srv1708834","req":{"id":10,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":0,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036831403,"pid":24642,"hostname":"srv1708834","req":{"id":11,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":0,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036831570,"pid":24642,"hostname":"srv1708834","req":{"id":12,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokr | {"level":30,"time":1780036831730,"pid":24642,"hostname":"srv1708834","req":{"id":13,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":0,"msg":"request completed"}
+
+/root/.pm2/logs/fishtokri-api-error-0.log last 15 lines:
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+0|fishtokr | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+
+0|fishtokri-api  | {"level":30,"time":1780036838767,"pid":24642,"hostname":"srv1708834","dbName":"orders","msg":"Connected to sub hub DB"}
+0|fishtokri-api  | {"level":30,"time":1780036838773,"pid":24642,"hostname":"srv1708834","candidateCount":0,"undeductedCount":0,"statuses":[],"msg":"runInventoryBackgroundDeduction: scan complete"}
+0|fishtokri-api  | {"level":30,"time":1780036842486,"pid":24642,"hostname":"srv1708834","req":{"id":14,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+0|fishtokri-api  | Error: ENOENT: no such file or directory, stat '/var/www/fishtokri/artifacts/fishtokri-admin/dist/index.html'
+^C
+root@srv1708834:/var/www/fishtokri#

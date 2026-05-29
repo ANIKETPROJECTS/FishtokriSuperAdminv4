@@ -36,7 +36,7 @@ app.use("/api", router);
 // In production, serve the React frontend from the built dist folder.
 // The path is resolved relative to the process working directory (cwd in ecosystem.config.cjs).
 if (process.env["NODE_ENV"] === "production") {
-  const frontendDist = path.resolve(process.cwd(), "artifacts/fishtokri-admin/dist");
+  const frontendDist = path.resolve(process.cwd(), "artifacts/fishtokri-admin/dist/public");
   if (fs.existsSync(frontendDist)) {
     app.use(express.static(frontendDist));
     // All non-API routes fall through to React's index.html for client-side routing.
