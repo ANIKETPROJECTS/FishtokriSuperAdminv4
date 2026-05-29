@@ -1577,6 +1577,23 @@ router.delete("/:id", async (req: ScopedRequest, res) => {
       }
     }
 
+    // Remove the deleted order's stored ref from the customer's orders array.
+    // Without this, the customer detail page still shows the order as "active"
+    // because enrichCustomers falls back to the stale ref in customer.orders.
+    if ((existing as any).customerId) {
+      try {
+        const cCol = await getCustomersCollection();
+        const orderId = req.params.id;
+        await cCol.updateOne(
+          { _id: new mongoose.Types.ObjectId(String((existing as any).customerId)) },
+          { $pull: { orders: { $or: [{ _id: oid }, { id: orderId }, { orderId }] } } as any }
+        );
+        req.log.info({ customerId: (existing as any).customerId, orderId }, "Removed order ref from customer.orders on delete");
+      } catch (e) {
+        req.log.error({ err: e }, "Failed to remove order ref from customer on delete");
+      }
+    }
+
     res.json({ success: true });
 
     // Sync timeslot order counts to MongoDB after deleting a slot order.
