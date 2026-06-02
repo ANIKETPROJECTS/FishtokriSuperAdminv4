@@ -21,7 +21,12 @@ router.get("/qz-certificate", (_req, res) => {
     res.status(503).send("QZ_CERTIFICATE not configured");
     return;
   }
-  res.type("text/plain").send(cert);
+  const match = cert.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/);
+  if (!match) {
+    res.status(503).send("QZ_CERTIFICATE is malformed");
+    return;
+  }
+  res.type("text/plain").send(match[0]);
 });
 
 router.post("/sign-message", async (req, res) => {
