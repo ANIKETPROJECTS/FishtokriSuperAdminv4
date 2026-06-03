@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  Truck, MapPin, Search, SlidersHorizontal,
-  X, Clock, CheckCircle2, XCircle, Phone, User, RefreshCw,
+  Truck, Search,
+  X, Clock, CheckCircle2, XCircle, User, RefreshCw,
   ShoppingBag, History, CalendarDays, CircleDollarSign, Eye,
   Mail, Home, Hash, Tag, Wallet, Receipt, FileText, Store,
   Banknote, Smartphone, CreditCard, Landmark, Plus, Trash,
+  MapPin, Phone,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,6 @@ import { usePaginated } from "@/hooks/use-paginated";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 
 function getAdminData() {
   try { return JSON.parse(localStorage.getItem("fishtokri_admin") || "null"); } catch { return null; }
@@ -275,7 +273,7 @@ function OrderDetailDialog({
 
 // ─── ORDERS LIST (shared by both tabs) ────────────────────────────────────────
 
-function OrdersList({ mode }: { mode: "active" | "history" }) {
+function OrdersList({ mode, refreshKey }: { mode: "active" | "history"; refreshKey: number }) {
   const { toast } = useToast();
   const admin = getAdminData();
 
@@ -285,6 +283,8 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [editStatus, setEditStatus] = useState("");
   const [saving, setSaving] = useState(false);
@@ -292,6 +292,18 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
   const [deliverPayOpen, setDeliverPayOpen] = useState(false);
   const [deliverPayStatus, setDeliverPayStatus] = useState<"unpaid" | "partial" | "paid">("paid");
   const [deliverPayEntries, setDeliverPayEntries] = useState<{ mode: string; amount: string; reference: string }[]>([]);
+
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [filterOpen]);
 
   const loadOrders = useCallback(async () => {
     if (!admin?.id) return;
@@ -305,7 +317,7 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
     } catch { } finally { setLoading(false); }
   }, [admin?.id, statusFilter, allowedStatuses.join(",")]);
 
-  useEffect(() => { loadOrders(); }, [loadOrders]);
+  useEffect(() => { loadOrders(); }, [loadOrders, refreshKey]);
 
   const filtered = useMemo(() => orders.filter((o) => {
     if (!search) return true;
@@ -415,40 +427,63 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
 
   return (
     <div className="space-y-3">
-      {/* Toolbar — mobile-first stacked layout */}
-      <div className="flex flex-col gap-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      {/* Toolbar — search + filter icon */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by customer, phone, area, item or order #"
-            className="pl-10 h-10 text-sm rounded-xl border-gray-200"
+            placeholder="Search by customer, phone, area, order #"
+            className="pl-10 h-10 text-sm rounded-xl border-gray-200 text-black placeholder:text-black/30"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/30 hover:text-black/60">
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={statusFilter || "_all"} onValueChange={(v) => setStatusFilter(v === "_all" ? "" : v)}>
-            <SelectTrigger className="h-9 flex-1 text-sm rounded-xl border-gray-200">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">All {mode === "active" ? "active" : "history"}</SelectItem>
-              {allowedStatuses.filter((s) => STATUS_CONFIG[s]).map((s) => (
-                <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>
+
+        {/* Filter icon button with dropdown */}
+        <div className="relative flex-shrink-0" ref={filterRef}>
+          <button
+            onClick={() => setFilterOpen((o) => !o)}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors ${
+              statusFilter ? "border-black bg-black" : "border-gray-200 bg-white"
+            }`}
+            title="Filter by status"
+          >
+            <img
+              src="/icon-filter.png"
+              alt="Filter"
+              className="w-4 h-4"
+              style={{ filter: statusFilter ? "invert(1)" : "none" }}
+            />
+          </button>
+
+          {filterOpen && (
+            <div className="absolute right-0 top-12 z-50 bg-white border border-gray-100 rounded-2xl shadow-xl min-w-[180px] overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100">
+                <p className="text-xs font-bold text-black uppercase tracking-wider">Filter by Status</p>
+              </div>
+              {[{ v: "", label: `All ${mode === "active" ? "active" : "history"}` }, ...allowedStatuses.filter((s) => STATUS_CONFIG[s]).map((s) => ({ v: s, label: STATUS_CONFIG[s].label }))].map((opt) => (
+                <button
+                  key={opt.v}
+                  onClick={() => { setStatusFilter(opt.v); setFilterOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                    (statusFilter || "") === opt.v
+                      ? "bg-black text-white"
+                      : "text-black hover:bg-gray-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" onClick={loadOrders} className="h-9 gap-1.5 text-gray-600 rounded-xl border-gray-200 px-3 flex-shrink-0">
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
-          </Button>
-          <span className="text-xs text-gray-400 flex-shrink-0">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
+            </div>
+          )}
         </div>
+
+        <span className="text-xs font-medium text-black flex-shrink-0">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
       {/* Summary cards */}
@@ -484,12 +519,12 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center px-6">
           {mode === "active"
-            ? <ShoppingBag className="w-12 h-12 text-gray-150 mx-auto mb-4 opacity-30" />
-            : <History className="w-12 h-12 text-gray-150 mx-auto mb-4 opacity-30" />}
+            ? <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            : <History className="w-12 h-12 mx-auto mb-4 opacity-20" />}
           <p className="text-black font-semibold text-base">
             {mode === "active" ? "No active orders" : "No past orders yet"}
           </p>
-          <p className="text-sm text-gray-400 mt-1 font-normal">
+          <p className="text-sm text-black/50 mt-1 font-normal">
             {mode === "active" ? "Orders assigned to you will appear here" : "Completed and cancelled orders will appear here"}
           </p>
         </div>
@@ -500,8 +535,8 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
             const total = orderTotal(o);
             const paid = Number(o.paidAmount || 0);
             const due = Math.max(0, total - paid);
+            const displayId = o.orderId || ("#" + String(o._id).slice(-6).toUpperCase());
 
-            // Left border color per status
             const borderColorMap: Record<string, string> = {
               pending:          "border-l-amber-400",
               confirmed:        "border-l-blue-500",
@@ -512,6 +547,20 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
             };
             const leftBorder = borderColorMap[o.status] ?? "border-l-gray-300";
 
+            const addressText = (() => {
+              const parts: string[] = [];
+              const d = o.deliveryAddressDetail || {};
+              const part1 = [d.houseNo, d.building].filter(Boolean).join(", ");
+              if (part1) parts.push(part1);
+              const part2 = [d.street, d.area].filter(Boolean).join(", ");
+              if (part2) parts.push(part2);
+              const part3 = [d.city, d.state, d.pincode].filter(Boolean).join(", ");
+              if (part3) parts.push(part3);
+              if (parts.length === 0 && o.address) parts.push(o.address);
+              if (parts.length === 0 && o.deliveryArea) parts.push(o.deliveryArea);
+              return parts.join(" · ");
+            })();
+
             return (
               <div
                 key={String(o._id)}
@@ -520,76 +569,60 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
                 <div className="p-4 space-y-3">
                   {/* Top row: name + amount */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2 flex-wrap">
                         <p className="font-bold text-black text-base leading-tight">{o.customerName}</p>
-                        <span className="text-[11px] text-gray-400 font-medium">#{String(o._id).slice(-6).toUpperCase()}</span>
+                        <span className="text-xs font-semibold text-black/50">{displayId}</span>
                       </div>
-                      <div className="mt-1">
+                      <div className="mt-1.5">
                         <StatusBadge status={o.status} />
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-black text-lg leading-tight">{formatRupees(total)}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{formatDate(o.createdAt)}</p>
+                      <p className="text-xs font-medium text-black/60 mt-0.5">{formatDate(o.createdAt)}</p>
                     </div>
                   </div>
 
-                  {/* Contact + address */}
-                  <div className="space-y-1.5">
+                  {/* Info rows with custom icons */}
+                  <div className="space-y-2">
                     {o.phone && (
-                      <a href={`tel:${o.phone}`} className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                        <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                        {o.phone}
+                      <a href={`tel:${o.phone}`} className="flex items-center gap-2.5">
+                        <img src="/icon-phone.png" alt="Phone" className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-semibold text-black">{o.phone}</span>
                       </a>
                     )}
-                    {o.address && (
-                      <p className="flex items-start gap-2 text-sm text-gray-500 font-normal leading-snug">
-                        <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                        <span>{o.address}{o.deliveryArea ? ` · ${o.deliveryArea}` : ""}</span>
-                      </p>
+                    {addressText && (
+                      <div className="flex items-start gap-2.5">
+                        <img src="/icon-pin.png" alt="Location" className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm font-medium text-black leading-snug">{addressText}</span>
+                      </div>
                     )}
-                    {!o.address && o.deliveryArea && (
-                      <p className="flex items-center gap-2 text-sm text-gray-500 font-normal">
-                        <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                        {o.deliveryArea}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Items */}
-                  {(o.items ?? []).length > 0 && (
-                    <p className="text-xs text-gray-400 font-normal leading-snug line-clamp-2">
-                      {(o.items as any[]).map((i) => i.name).join(", ")}
-                    </p>
-                  )}
-
-                  {/* Timeslot + payment info row */}
-                  <div className="flex items-center gap-3 flex-wrap">
                     {o.timeslotLabel && (
-                      <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-lg">
-                        {o.timeslotLabel}
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        <img src="/icon-clock.png" alt="Time" className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-semibold text-black">{o.timeslotLabel}</span>
+                      </div>
                     )}
                     {mode === "history" && paid > 0 && (
-                      <span className="text-xs text-gray-400 font-normal">
-                        Paid {formatRupees(paid)}{due > 0 ? <span className="text-amber-500 font-medium"> · Due {formatRupees(due)}</span> : null}
-                      </span>
+                      <p className="text-xs font-medium text-black/60 pl-6">
+                        Paid {formatRupees(paid)}{due > 0 ? <span className="text-amber-600 font-semibold"> · Due {formatRupees(due)}</span> : null}
+                      </p>
                     )}
                   </div>
 
-                  {/* Action buttons — full width on mobile */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-gray-50">
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-black/5">
                     <button
                       onClick={() => setDetail(o)}
-                      className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl text-sm font-semibold text-black bg-black/5 hover:bg-black/10 transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
                     </button>
                     {(cfg.next?.length ?? 0) > 0 && (
                       <button
                         onClick={() => { setSelectedOrder(o); setEditStatus(o.status); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-semibold text-white bg-[#1A56DB] hover:bg-[#1447B4] transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl text-sm font-semibold text-white bg-[#1A56DB] hover:bg-[#1447B4] transition-colors"
                       >
                         Update Status
                       </button>
@@ -867,6 +900,8 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
 
 export default function MyDeliveries() {
   const [activeTab, setActiveTab] = useState<"active" | "history">("active");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -874,28 +909,47 @@ export default function MyDeliveries() {
     setHeaderSlot(el as HTMLElement | null);
   }, []);
 
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+    setTimeout(() => setRefreshing(false), 800);
+  };
+
   return (
     <>
-      {/* Inject title into the sticky header via portal */}
+      {/* Inject title + refresh button into sticky header via portal */}
       {headerSlot && createPortal(
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-black leading-tight truncate">My Orders</p>
-          <p className="text-[11px] text-gray-400 font-normal leading-tight hidden sm:block truncate">
-            Manage active deliveries and review past orders.
-          </p>
+        <div className="flex items-center w-full min-w-0">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-black leading-tight truncate">My Orders</p>
+            <p className="text-[11px] text-black/50 font-normal leading-tight hidden sm:block truncate">
+              Manage active deliveries and review past orders.
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center hover:opacity-80 active:scale-95 transition-all ml-2"
+            title="Refresh orders"
+          >
+            <img
+              src="/icon-refresh.png"
+              alt="Refresh"
+              className={`w-9 h-9 ${refreshing ? "animate-spin" : ""}`}
+            />
+          </button>
         </div>,
         headerSlot,
       )}
 
       <div className="space-y-4 max-w-2xl mx-auto w-full">
         {/* Tabs */}
-        <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+        <div className="flex bg-black/5 rounded-2xl p-1 gap-1">
           <button
             onClick={() => setActiveTab("active")}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all ${
               activeTab === "active"
                 ? "bg-white text-black shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-black/50 hover:text-black"
             }`}
           >
             <ShoppingBag className="w-4 h-4" /> Active Orders
@@ -905,14 +959,16 @@ export default function MyDeliveries() {
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all ${
               activeTab === "history"
                 ? "bg-white text-black shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-black/50 hover:text-black"
             }`}
           >
             <History className="w-4 h-4" /> Order History
           </button>
         </div>
 
-        {activeTab === "active" ? <OrdersList mode="active" /> : <OrdersList mode="history" />}
+        {activeTab === "active"
+          ? <OrdersList mode="active" refreshKey={refreshKey} />
+          : <OrdersList mode="history" refreshKey={refreshKey} />}
       </div>
     </>
   );
