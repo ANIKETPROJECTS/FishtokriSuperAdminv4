@@ -58,7 +58,7 @@ function getStoredAdmin() {
 
 // Default landing route for each role.
 function homeFor(role?: string) {
-  if (role === "delivery_person") return "/delivery-dashboard";
+  if (role === "delivery_person") return "/my-deliveries";
   // master_admin, super_hub, sub_hub all share the same unified shell
   return "/dashboard";
 }

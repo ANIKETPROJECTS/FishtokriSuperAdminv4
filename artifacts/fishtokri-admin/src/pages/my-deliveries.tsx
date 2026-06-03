@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Truck, MapPin, Search, SlidersHorizontal,
   X, Clock, CheckCircle2, XCircle, Phone, User, RefreshCw,
@@ -413,28 +414,41 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
   }, [filtered]);
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by customer, phone, area, item or order #" className="pl-8 h-9 text-sm" />
-          {search && <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><X className="w-3.5 h-3.5" /></button>}
+    <div className="space-y-3">
+      {/* Toolbar — mobile-first stacked layout */}
+      <div className="flex flex-col gap-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by customer, phone, area, item or order #"
+            className="pl-10 h-10 text-sm rounded-xl border-gray-200"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        <Select value={statusFilter || "_all"} onValueChange={(v) => setStatusFilter(v === "_all" ? "" : v)}>
-          <SelectTrigger className="h-9 w-44 text-sm">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 mr-1" />
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all">All {mode === "active" ? "active" : "history"}</SelectItem>
-            {allowedStatuses.filter((s) => STATUS_CONFIG[s]).map((s) => <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" onClick={loadOrders} className="h-9 gap-1.5 text-gray-500">
-          <RefreshCw className="w-3.5 h-3.5" /> Refresh
-        </Button>
-        <span className="text-xs text-gray-400 ml-auto">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter || "_all"} onValueChange={(v) => setStatusFilter(v === "_all" ? "" : v)}>
+            <SelectTrigger className="h-9 flex-1 text-sm rounded-xl border-gray-200">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">All {mode === "active" ? "active" : "history"}</SelectItem>
+              {allowedStatuses.filter((s) => STATUS_CONFIG[s]).map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={loadOrders} className="h-9 gap-1.5 text-gray-600 rounded-xl border-gray-200 px-3 flex-shrink-0">
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </Button>
+          <span className="text-xs text-gray-400 flex-shrink-0">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -457,65 +471,129 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
 
       {/* Orders list */}
       {loading ? (
-        <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+              <Skeleton className="h-4 w-2/3 rounded-lg" />
+              <Skeleton className="h-3 w-1/2 rounded-lg" />
+              <Skeleton className="h-3 w-3/4 rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-xl" />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 py-20 text-center">
-          {mode === "active" ? <Truck className="w-10 h-10 text-gray-200 mx-auto mb-3" /> : <History className="w-10 h-10 text-gray-200 mx-auto mb-3" />}
-          <p className="text-gray-400 font-medium">{mode === "active" ? "No active orders assigned to you" : "No past orders yet"}</p>
-          <p className="text-xs text-gray-300 mt-1">{mode === "active" ? "Orders will appear here once admin assigns them" : "Completed and cancelled orders will appear here"}</p>
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center px-6">
+          {mode === "active"
+            ? <ShoppingBag className="w-12 h-12 text-gray-150 mx-auto mb-4 opacity-30" />
+            : <History className="w-12 h-12 text-gray-150 mx-auto mb-4 opacity-30" />}
+          <p className="text-black font-semibold text-base">
+            {mode === "active" ? "No active orders" : "No past orders yet"}
+          </p>
+          <p className="text-sm text-gray-400 mt-1 font-normal">
+            {mode === "active" ? "Orders assigned to you will appear here" : "Completed and cancelled orders will appear here"}
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {pagedOrders.pageItems.map((o) => {
             const cfg = STATUS_CONFIG[o.status] ?? STATUS_CONFIG.pending;
-            const Icon = cfg.icon;
             const total = orderTotal(o);
             const paid = Number(o.paidAmount || 0);
             const due = Math.max(0, total - paid);
+
+            // Left border color per status
+            const borderColorMap: Record<string, string> = {
+              pending:          "border-l-amber-400",
+              confirmed:        "border-l-blue-500",
+              out_for_delivery: "border-l-indigo-500",
+              delivered:        "border-l-green-500",
+              cancelled:        "border-l-red-400",
+              takeaway:         "border-l-emerald-500",
+            };
+            const leftBorder = borderColorMap[o.status] ?? "border-l-gray-300";
+
             return (
-              <div key={String(o._id)} className="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-full ${cfg.bg} flex items-center justify-center flex-shrink-0 border`}>
-                      <Icon className={`w-4 h-4 ${cfg.color}`} />
-                    </div>
+              <div
+                key={String(o._id)}
+                className={`bg-white rounded-2xl border border-gray-100 border-l-4 ${leftBorder} shadow-sm overflow-hidden`}
+              >
+                <div className="p-4 space-y-3">
+                  {/* Top row: name + amount */}
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-[#162B4D] text-sm">{o.customerName}</p>
-                        <span className="text-[10px] text-gray-400">#{String(o._id).slice(-6).toUpperCase()}</span>
+                        <p className="font-bold text-black text-base leading-tight">{o.customerName}</p>
+                        <span className="text-[11px] text-gray-400 font-medium">#{String(o._id).slice(-6).toUpperCase()}</span>
+                      </div>
+                      <div className="mt-1">
                         <StatusBadge status={o.status} />
                       </div>
-                      {o.phone && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{o.phone}</p>}
-                      {o.address && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3 text-gray-400" />{o.address}</p>}
-                      {o.deliveryArea && <p className="text-[10px] text-gray-400">{o.deliveryArea}</p>}
-                      <p className="text-xs text-gray-500 mt-1 truncate">{(o.items ?? []).map((i: any) => i.name).join(", ")}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        {o.timeslotLabel && <p className="text-[10px] text-indigo-500 font-medium">{o.timeslotLabel}</p>}
-                        {mode === "history" && (
-                          <p className="text-[10px] text-gray-400">Paid {formatRupees(paid)} {due > 0 && <span className="text-amber-500">• Due {formatRupees(due)}</span>}</p>
-                        )}
-                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-black text-lg leading-tight">{formatRupees(total)}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{formatDate(o.createdAt)}</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <p className="font-bold text-[#162B4D]">{formatRupees(total)}</p>
-                    <p className="text-[10px] text-gray-400">{formatDate(o.createdAt)}</p>
-                    <div className="flex items-center gap-1.5">
+
+                  {/* Contact + address */}
+                  <div className="space-y-1.5">
+                    {o.phone && (
+                      <a href={`tel:${o.phone}`} className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                        <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        {o.phone}
+                      </a>
+                    )}
+                    {o.address && (
+                      <p className="flex items-start gap-2 text-sm text-gray-500 font-normal leading-snug">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <span>{o.address}{o.deliveryArea ? ` · ${o.deliveryArea}` : ""}</span>
+                      </p>
+                    )}
+                    {!o.address && o.deliveryArea && (
+                      <p className="flex items-center gap-2 text-sm text-gray-500 font-normal">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        {o.deliveryArea}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Items */}
+                  {(o.items ?? []).length > 0 && (
+                    <p className="text-xs text-gray-400 font-normal leading-snug line-clamp-2">
+                      {(o.items as any[]).map((i) => i.name).join(", ")}
+                    </p>
+                  )}
+
+                  {/* Timeslot + payment info row */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {o.timeslotLabel && (
+                      <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-lg">
+                        {o.timeslotLabel}
+                      </span>
+                    )}
+                    {mode === "history" && paid > 0 && (
+                      <span className="text-xs text-gray-400 font-normal">
+                        Paid {formatRupees(paid)}{due > 0 ? <span className="text-amber-500 font-medium"> · Due {formatRupees(due)}</span> : null}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons — full width on mobile */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-gray-50">
+                    <button
+                      onClick={() => setDetail(o)}
+                      className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </button>
+                    {(cfg.next?.length ?? 0) > 0 && (
                       <button
-                        onClick={() => setDetail(o)}
-                        className="text-[11px] font-semibold text-gray-500 hover:text-[#1A56DB] bg-gray-50 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                        onClick={() => { setSelectedOrder(o); setEditStatus(o.status); }}
+                        className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-semibold text-white bg-[#1A56DB] hover:bg-[#1447B4] transition-colors"
                       >
-                        <Eye className="w-3 h-3" /> View
+                        Update Status
                       </button>
-                      {(cfg.next?.length ?? 0) > 0 && (
-                        <button
-                          onClick={() => { setSelectedOrder(o); setEditStatus(o.status); }}
-                          className="text-[11px] font-semibold text-[#1A56DB] bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors"
-                        >
-                          Update Status
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -789,36 +867,53 @@ function OrdersList({ mode }: { mode: "active" | "history" }) {
 
 export default function MyDeliveries() {
   const [activeTab, setActiveTab] = useState<"active" | "history">("active");
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const el = document.getElementById("page-header-slot");
+    setHeaderSlot(el as HTMLElement | null);
+  }, []);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
-          <Truck className="w-5 h-5 text-orange-500" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-[#162B4D]">My Orders</h2>
-          <p className="text-gray-500 text-sm mt-0.5">Manage active deliveries and review past orders.</p>
-        </div>
-      </div>
+    <>
+      {/* Inject title into the sticky header via portal */}
+      {headerSlot && createPortal(
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-black leading-tight truncate">My Orders</p>
+          <p className="text-[11px] text-gray-400 font-normal leading-tight hidden sm:block truncate">
+            Manage active deliveries and review past orders.
+          </p>
+        </div>,
+        headerSlot,
+      )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-100 bg-white rounded-t-xl">
-        <button
-          onClick={() => setActiveTab("active")}
-          className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "active" ? "border-[#1A56DB] text-[#1A56DB] bg-blue-50/40" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-        >
-          <Truck className="w-4 h-4" /> Active Orders
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "history" ? "border-[#1A56DB] text-[#1A56DB] bg-blue-50/40" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-        >
-          <History className="w-4 h-4" /> Order History
-        </button>
-      </div>
+      <div className="space-y-4 max-w-2xl mx-auto w-full">
+        {/* Tabs */}
+        <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+              activeTab === "active"
+                ? "bg-white text-black shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4" /> Active Orders
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+              activeTab === "history"
+                ? "bg-white text-black shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <History className="w-4 h-4" /> Order History
+          </button>
+        </div>
 
-      {activeTab === "active" ? <OrdersList mode="active" /> : <OrdersList mode="history" />}
-    </div>
+        {activeTab === "active" ? <OrdersList mode="active" /> : <OrdersList mode="history" />}
+      </div>
+    </>
   );
 }

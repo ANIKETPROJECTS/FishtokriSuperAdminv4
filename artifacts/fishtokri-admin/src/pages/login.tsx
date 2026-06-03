@@ -44,7 +44,7 @@ export default function Login() {
       const admin = (() => {
         try { return JSON.parse(localStorage.getItem("fishtokri_admin") || "{}"); } catch { return {}; }
       })();
-      if (admin?.role === "delivery_person") setLocation("/delivery-dashboard");
+      if (admin?.role === "delivery_person") setLocation("/my-deliveries");
       else setLocation("/dashboard");
     }
   }, [setLocation]);
@@ -86,7 +86,7 @@ export default function Login() {
         onSuccess: (data) => {
           persistAuth(data.token, data.admin);
           if ((data.admin as any).role === "delivery_person") {
-            setLocation("/delivery-dashboard");
+            setLocation("/my-deliveries");
           } else {
             setLocation("/dashboard");
           }

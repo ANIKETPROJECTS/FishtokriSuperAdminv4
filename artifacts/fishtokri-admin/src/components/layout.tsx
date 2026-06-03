@@ -264,9 +264,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const deliveryNavItems = [
-    { href: "/delivery-dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-deliveries", label: "Orders", icon: Truck },
-    { href: "/my-deliveries-hubs", label: "My Hubs", icon: Building2 },
     { href: "/delivery-report", label: "My Report", icon: FileBarChart },
   ];
 
@@ -470,15 +468,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Mobile inline brand (so the header isn't empty on the left) */}
-          <div className="md:hidden flex items-center gap-2 min-w-0">
-            <span className="text-sm font-bold text-[#162B4D] truncate">{roleLabel}</span>
-          </div>
+          {/* Mobile inline brand — hidden for delivery (page injects its own title via slot) */}
+          {!isDelivery && (
+            <div className="md:hidden flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold text-[#162B4D] truncate">{roleLabel}</span>
+            </div>
+          )}
 
           <div id="page-header-slot" className="flex items-center gap-3 flex-1 min-w-0" />
         </header>
 
-        <div className={`flex-1 min-w-0 bg-white ${location.startsWith("/orders") ? "px-4 py-3" : "p-4 sm:p-6 lg:p-8"}`}>
+        <div className={`flex-1 min-w-0 bg-white ${location.startsWith("/orders") ? "px-4 py-3" : location.startsWith("/my-deliveries") || location.startsWith("/delivery-report") ? "p-4" : "p-4 sm:p-6 lg:p-8"}`}>
           {children}
         </div>
       </main>
