@@ -264,8 +264,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const deliveryNavItems = [
-    { href: "/my-deliveries", label: "Orders", icon: Truck },
-    { href: "/delivery-report", label: "My Report", icon: FileBarChart },
+    { href: "/my-deliveries", label: "Orders", icon: Truck, iconSrc: "/icon-order-delivery.png" },
+    { href: "/delivery-report", label: "My Report", icon: FileBarChart, iconSrc: "/icon-report-custom.png" },
   ];
 
   const navItems = isSuperHub
@@ -299,35 +299,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className={`relative flex items-center border-b border-white/10 transition-all duration-300 ${expanded ? "justify-center px-4 py-4" : "justify-center px-2 py-3"}`}>
           {expanded ? (
-            <div className="w-[180px] h-[64px] rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
-              <img src="/logo.png" alt="FishTokri" className="w-[164px] h-[56px] object-contain" />
-            </div>
+            isDelivery ? (
+              <div className="w-full mx-2 h-[76px] rounded-2xl bg-white flex items-center justify-center flex-shrink-0 shadow-md">
+                <img src="/logo.png" alt="FishTokri" className="w-[180px] h-[64px] object-contain" />
+              </div>
+            ) : (
+              <div className="w-[180px] h-[64px] rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                <img src="/logo.png" alt="FishTokri" className="w-[164px] h-[56px] object-contain" />
+              </div>
+            )
           ) : (
             <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
               <img src="/logo.png" alt="FishTokri" className="w-7 h-7 object-contain" />
             </div>
           )}
-          {/* Mobile close button */}
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="md:hidden absolute right-2 top-2 p-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/10"
-            aria-label="Close menu"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* Role Label */}
-        {expanded && (
+        {/* Role Label — hidden for delivery */}
+        {expanded && !isDelivery && (
           <div className="px-5 pt-5 pb-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{roleLabel}</p>
           </div>
         )}
+        {expanded && isDelivery && <div className="pt-4" />}
 
         {/* Nav */}
-        <nav className="flex-1 pb-4 pt-2">
+        <nav className={`flex-1 pb-4 ${isDelivery ? "pt-2" : "pt-2"}`} style={isDelivery && isMobile ? { fontFamily: "Poppins, sans-serif" } : {}}>
           {navItems.map((item: any) => {
-            const { href, label, icon: Icon, matchPrefix, children } = item;
+            const { href, label, icon: Icon, matchPrefix, children, iconSrc } = item;
             const isActive =
               location === href ||
               (matchPrefix && location.startsWith(matchPrefix)) ||
@@ -353,6 +352,48 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             const badgeCount = href === "/admin-users" ? pendingResets : 0;
 
+            // ── Delivery nav item — big, bold, full-width pill ──
+            if (isDelivery && isMobile && expanded) {
+              return (
+                <Link key={href} href={href}>
+                  <div
+                    className={`mx-3 mb-2 flex items-center gap-4 px-4 rounded-2xl cursor-pointer transition-all active:scale-[0.97] ${
+                      isActive
+                        ? "bg-white/15 border border-white/20"
+                        : "border border-transparent hover:bg-white/8"
+                    }`}
+                    style={{ height: "68px" }}
+                  >
+                    {iconSrc ? (
+                      <div
+                        className="w-7 h-7 flex-shrink-0"
+                        style={{
+                          WebkitMaskImage: `url(${iconSrc})`,
+                          maskImage: `url(${iconSrc})`,
+                          WebkitMaskSize: "contain",
+                          maskSize: "contain",
+                          WebkitMaskRepeat: "no-repeat",
+                          maskRepeat: "no-repeat",
+                          WebkitMaskPosition: "center",
+                          maskPosition: "center",
+                          backgroundColor: isActive ? "white" : "rgba(255,255,255,0.7)",
+                        }}
+                      />
+                    ) : (
+                      <Icon className={`w-7 h-7 flex-shrink-0 ${isActive ? "text-white" : "text-white/70"}`} />
+                    )}
+                    <span className={`text-lg font-semibold truncate ${isActive ? "text-white" : "text-white"}`}>
+                      {label}
+                    </span>
+                    {isActive && (
+                      <div className="ml-auto w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                    )}
+                  </div>
+                </Link>
+              );
+            }
+
+            // ── Standard nav item ──
             return (
               <Link key={href} href={href}>
                 <div
@@ -385,6 +426,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Delivery close handle — vertically centered in the nav */}
+          {isDelivery && isMobile && expanded && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/15 transition-colors"
+                style={{ fontFamily: "Poppins, sans-serif" }}
+              >
+                <ChevronLeft className="w-5 h-5 text-white" />
+                <span className="text-sm font-semibold text-white">Close Menu</span>
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Settings Section */}

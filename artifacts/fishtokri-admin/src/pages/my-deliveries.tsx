@@ -879,57 +879,58 @@ function OrdersList({ mode, refreshKey, onCountChange }: { mode: "active" | "his
         onUpdateStatus={(o) => { setSelectedOrder(o); setEditStatus(o.status); }}
       />
 
-      {/* Payment-on-deliver dialog */}
-      <Dialog open={deliverPayOpen} onOpenChange={(open) => { if (!saving) { setDeliverPayOpen(open); if (!open) setPendingDeliverOrder(null); } }}>
-        <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              Mark as Delivered
-            </DialogTitle>
-          </DialogHeader>
+      {/* Payment-on-deliver — full-screen overlay */}
+      {deliverPayOpen && (pendingDeliverOrder || selectedOrder) && createPortal(
+        (() => {
+          const activeOrder = pendingDeliverOrder || selectedOrder;
+          const orderTotalValue = orderTotal(activeOrder);
+          const existingPaid = Number(activeOrder.paidAmount) || 0;
+          const remainingDue = Math.max(0, orderTotalValue - existingPaid);
+          const newPaidTotal = existingPaid + (deliverPayStatus === "unpaid" ? 0 : deliverPayPaidTotal);
+          const newDue = Math.max(0, orderTotalValue - newPaidTotal);
 
-          {(pendingDeliverOrder || selectedOrder) && (() => {
-            const activeOrder = pendingDeliverOrder || selectedOrder;
-            const orderTotalValue = orderTotal(activeOrder);
-            const existingPaid = Number(activeOrder.paidAmount) || 0;
-            const remainingDue = Math.max(0, orderTotalValue - existingPaid);
-            const newPaidTotal = existingPaid + (deliverPayStatus === "unpaid" ? 0 : deliverPayPaidTotal);
-            const newDue = Math.max(0, orderTotalValue - newPaidTotal);
+          const closeDialog = () => {
+            if (saving) return;
+            setDeliverPayOpen(false);
+            setPendingDeliverOrder(null);
+          };
 
-            return (
-              <div className="space-y-4">
-                <div className="px-3 py-2 bg-gray-50 rounded-xl space-y-1">
-                  <div className="flex items-center justify-between text-[12px] text-gray-500">
-                    <span>Order Total</span>
-                    <span className="font-semibold text-gray-700">{formatRupees(orderTotalValue)}</span>
+          return (
+            <div className="fixed inset-0 z-[300] flex flex-col bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
+              {/* ── Header ── */}
+              <div className="bg-[#162B4D] px-5 pt-6 pb-5 flex-shrink-0">
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
+                  {activeOrder.orderId || ("#" + String(activeOrder._id).slice(-6).toUpperCase())}
+                </p>
+                <h1 className="text-2xl font-bold text-white leading-tight">Mark as Delivered</h1>
+                <p className="text-sm font-medium text-white/70 mt-1">{activeOrder.customerName}</p>
+
+                {/* Order totals */}
+                <div className="mt-4 flex gap-3">
+                  <div className="flex-1 bg-white/10 rounded-2xl px-4 py-3">
+                    <p className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mb-0.5">Order Total</p>
+                    <p className="text-lg font-bold text-white">{formatRupees(orderTotalValue)}</p>
                   </div>
-                  {existingPaid > 0 && (
-                    <div className="flex items-center justify-between text-[12px] text-emerald-600">
-                      <span>Already Paid</span>
-                      <span>{formatRupees(existingPaid)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-[12px] text-amber-600">
-                    <span>Outstanding</span>
-                    <span className="font-semibold">{formatRupees(remainingDue)}</span>
+                  <div className="flex-1 bg-[#F05B4E]/80 rounded-2xl px-4 py-3">
+                    <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wider mb-0.5">Outstanding</p>
+                    <p className="text-lg font-bold text-white">{formatRupees(remainingDue)}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Payment Status</p>
+              {/* ── Body ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+
+                {/* Payment Status */}
+                <div>
+                  <p className="text-[11px] font-bold text-black uppercase tracking-widest mb-3">Payment Status</p>
                   <div className="grid grid-cols-3 gap-2">
                     {([
-                      { v: "unpaid", label: "Unpaid", color: "amber" },
-                      { v: "partial", label: "Partial", color: "blue" },
-                      { v: "paid", label: "Fully Paid", color: "emerald" },
+                      { v: "unpaid",  label: "Unpaid",     bg: "#F59E0B" },
+                      { v: "partial", label: "Partial",    bg: "#3B82F6" },
+                      { v: "paid",    label: "Fully Paid", bg: "#10B981" },
                     ] as const).map((opt) => {
                       const active = deliverPayStatus === opt.v;
-                      const colorMap: Record<string, string> = {
-                        amber: active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-gray-200 text-gray-500 hover:bg-gray-50",
-                        blue: active ? "border-blue-300 bg-blue-50 text-[#1A56DB]" : "border-gray-200 text-gray-500 hover:bg-gray-50",
-                        emerald: active ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50",
-                      };
                       return (
                         <button
                           key={opt.v}
@@ -948,7 +949,12 @@ function OrdersList({ mode, refreshKey, onCountChange }: { mode: "active" | "his
                               );
                             }
                           }}
-                          className={`h-9 rounded-xl border text-xs font-semibold transition-colors ${colorMap[opt.color]}`}
+                          style={active ? { background: opt.bg } : {}}
+                          className={`h-12 rounded-2xl text-sm font-bold transition-all active:scale-95 ${
+                            active
+                              ? "text-white shadow-md"
+                              : "bg-black/5 text-black border-2 border-transparent hover:border-black/10"
+                          }`}
                         >
                           {opt.label}
                         </button>
@@ -957,65 +963,64 @@ function OrdersList({ mode, refreshKey, onCountChange }: { mode: "active" | "his
                   </div>
                 </div>
 
+                {/* Payment entries */}
                 {deliverPayStatus !== "unpaid" && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Collected Payment</p>
-                    {deliverPayEntries.map((entry, idx) => {
-                      const ModeIcon = (PAYMENT_MODES.find((m) => m.value === entry.mode)?.Icon) || Tag;
-                      return (
-                        <div
-                          key={idx}
-                          className="grid grid-cols-12 gap-2 items-center p-2 rounded-xl border border-gray-100 bg-gray-50/40"
-                        >
-                          <div className="col-span-5 relative">
-                            <ModeIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                            <select
-                              value={entry.mode}
-                              onChange={(e) =>
-                                setDeliverPayEntries((arr) =>
-                                  arr.map((p, i) => (i === idx ? { ...p, mode: e.target.value } : p))
-                                )
-                              }
-                              className="w-full h-9 pl-8 pr-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/30"
+                  <div>
+                    <p className="text-[11px] font-bold text-black uppercase tracking-widest mb-3">Collected Payment</p>
+                    <div className="space-y-3">
+                      {deliverPayEntries.map((entry, idx) => {
+                        const ModeIcon = (PAYMENT_MODES.find((m) => m.value === entry.mode)?.Icon) || Tag;
+                        return (
+                          <div key={idx} className="flex items-center gap-2 p-3 rounded-2xl border-2 border-black/8 bg-black/[0.02]">
+                            <div className="flex-1 relative">
+                              <ModeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 pointer-events-none" />
+                              <select
+                                value={entry.mode}
+                                onChange={(e) =>
+                                  setDeliverPayEntries((arr) =>
+                                    arr.map((p, i) => (i === idx ? { ...p, mode: e.target.value } : p))
+                                  )
+                                }
+                                className="w-full h-11 pl-10 pr-3 text-sm font-semibold text-black border-none rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-black/20 shadow-sm"
+                              >
+                                {PAYMENT_MODES.map((m) => (
+                                  <option key={m.value} value={m.value}>{m.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex-1 relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-black/40">₹</span>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                min={0}
+                                value={entry.amount}
+                                onChange={(e) =>
+                                  setDeliverPayEntries((arr) =>
+                                    arr.map((p, i) => (i === idx ? { ...p, amount: e.target.value } : p))
+                                  )
+                                }
+                                placeholder="Amount"
+                                className="pl-7 h-11 text-sm font-semibold text-black border-none rounded-xl shadow-sm"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setDeliverPayEntries((arr) => arr.filter((_, i) => i !== idx))}
+                              disabled={deliverPayEntries.length === 1}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl text-black/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                             >
-                              {PAYMENT_MODES.map((m) => (
-                                <option key={m.value} value={m.value}>{m.label}</option>
-                              ))}
-                            </select>
+                              <Trash className="w-4 h-4" />
+                            </button>
                           </div>
-                          <div className="col-span-6 relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              min={0}
-                              value={entry.amount}
-                              onChange={(e) =>
-                                setDeliverPayEntries((arr) =>
-                                  arr.map((p, i) => (i === idx ? { ...p, amount: e.target.value } : p))
-                                )
-                              }
-                              placeholder="Amount"
-                              className="pl-6 h-9 text-sm"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setDeliverPayEntries((arr) => arr.filter((_, i) => i !== idx))}
-                            disabled={deliverPayEntries.length === 1}
-                            className="col-span-1 h-9 flex items-center justify-center text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                            aria-label="Remove payment"
-                          >
-                            <Trash className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
 
-                    <div className="flex items-center justify-between gap-2">
-                      <Button
+                    {/* Add payment + summary */}
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <button
                         type="button"
-                        variant="outline"
                         onClick={() =>
                           setDeliverPayEntries((arr) => [
                             ...arr,
@@ -1028,40 +1033,45 @@ function OrdersList({ mode, refreshKey, onCountChange }: { mode: "active" | "his
                             },
                           ])
                         }
-                        className="h-8 text-xs gap-1"
+                        className="flex items-center gap-1.5 px-4 h-10 rounded-2xl border-2 border-dashed border-black/20 text-sm font-semibold text-black hover:border-black/40 transition-colors"
                       >
-                        <Plus className="w-3 h-3" /> Add payment
-                      </Button>
-                      <div className="text-[11px] text-gray-500 flex items-center gap-3">
-                        <span>Collecting: <span className="font-semibold text-gray-700">{formatRupees(deliverPayPaidTotal)}</span></span>
-                        <span>
-                          New due:{" "}
-                          <span className={`font-semibold ${newDue > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {formatRupees(newDue)}
-                          </span>
-                        </span>
+                        <Plus className="w-4 h-4" /> Add payment
+                      </button>
+                      <div className="text-right text-sm">
+                        <p className="font-semibold text-black">Collecting {formatRupees(deliverPayPaidTotal)}</p>
+                        <p className={`text-xs font-bold ${newDue > 0 ? "text-[#F59E0B]" : "text-[#10B981]"}`}>
+                          Due after: {formatRupees(newDue)}
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            );
-          })()}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeliverPayOpen(false)} disabled={saving} className="h-9">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeliverWithPayment}
-              disabled={saving}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white h-9"
-            >
-              {saving ? "Saving..." : "Mark as Delivered"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {/* ── Footer ── */}
+              <div className="px-5 py-4 border-t-2 border-black/5 bg-white flex gap-3 flex-shrink-0">
+                <button
+                  onClick={closeDialog}
+                  disabled={saving}
+                  className="flex-1 h-13 rounded-2xl border-2 border-black/10 text-black font-bold text-sm hover:bg-black/5 transition-colors disabled:opacity-40"
+                  style={{ height: "52px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeliverWithPayment}
+                  disabled={saving}
+                  className="flex-[2] rounded-2xl text-white font-bold text-base transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
+                  style={{ background: "#10B981", height: "52px" }}
+                >
+                  {saving ? "Saving…" : "Mark as Delivered"}
+                </button>
+              </div>
+            </div>
+          );
+        })(),
+        document.body
+      )}
     </div>
   );
 }
