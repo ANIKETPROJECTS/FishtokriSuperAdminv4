@@ -71,6 +71,7 @@ channel = "stable-25_05"
 CLOUDINARY_CLOUD_NAME = "dbkmmxnzd"
 CLOUDINARY_API_KEY = "935594792745712"
 PORT = "8080"
+API_PORT = "8080"
 
 [[ports]]
 localPort = 5000
