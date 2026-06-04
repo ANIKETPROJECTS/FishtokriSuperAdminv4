@@ -78,7 +78,7 @@ function StatCard({
 
 // ── Order card (mobile-first, Poppins, black text, no dropdown) ─────────────
 function OrderCard({ order }: { order: any }) {
-  const orderId = order.orderNumber ? `#${order.orderNumber}` : ("#" + String(order.id || "").slice(-6).toUpperCase());
+  const orderId = order.orderId || (order.orderNumber ? `#${order.orderNumber}` : ("#" + String(order.id || "").slice(-6).toUpperCase()));
 
   const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
     delivered: { bg: "bg-green-500", text: "text-white", label: "Delivered" },

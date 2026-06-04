@@ -24,7 +24,7 @@ function buildDateFilter(from: string, to: string): Record<string, any> {
 }
 
 const ORDER_PROJECTION = {
-  _id: 1, orderNumber: 1, customerName: 1, phone: 1, total: 1,
+  _id: 1, orderId: 1, orderNumber: 1, customerName: 1, phone: 1, total: 1,
   paidAmount: 1, dueAmount: 1, payments: 1, paymentStatus: 1, status: 1,
   deliveryType: 1, assignedDeliveryPersonId: 1, assignedDeliveryPersonName: 1,
   createdAt: 1, subHubName: 1, deliveryArea: 1, items: 1,
@@ -73,6 +73,7 @@ function processOrders(orders: any[]) {
 
     person.orders.push({
       id: String(order._id),
+      orderId: order.orderId,
       orderNumber: order.orderNumber,
       customerName: order.customerName,
       phone: order.phone,
