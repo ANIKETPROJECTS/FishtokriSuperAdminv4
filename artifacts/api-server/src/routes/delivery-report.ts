@@ -61,6 +61,10 @@ function processOrders(orders: any[]) {
     for (const p of payments) {
       const mode = (p.mode || "other").toLowerCase();
       const amount = Number(p.amount) || 0;
+      // Wallet payments are pre-deducted from the customer's account at order
+      // creation time — the delivery person never physically collects this amount.
+      // Exclude wallet from the delivery report's collected totals and mode breakdown.
+      if (mode === "wallet") continue;
       if (!person.byMode[mode]) person.byMode[mode] = { count: 0, amount: 0 };
       (person.byMode[mode] as ModeData).count++;
       (person.byMode[mode] as ModeData).amount += amount;
