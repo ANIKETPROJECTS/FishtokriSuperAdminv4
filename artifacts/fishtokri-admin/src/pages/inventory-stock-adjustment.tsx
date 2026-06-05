@@ -580,13 +580,29 @@ function ExistingBatchesCard({
                   <input
                     type="date"
                     value={b.receivedDate?.slice(0, 10) ?? ""}
-                    onChange={(e) => patchBatch(i, { receivedDate: e.target.value || null })}
+                    onChange={(e) => {
+                      const received = e.target.value || null;
+                      const patch: Partial<Batch> = { receivedDate: received };
+                      if (received && b.expiryDate) {
+                        const days = Math.round((new Date(b.expiryDate).getTime() - new Date(received).getTime()) / 86400000);
+                        patch.shelfLifeDays = days >= 0 ? days : null;
+                      }
+                      patchBatch(i, patch);
+                    }}
                     className="h-7 px-2 text-[11px] text-[#162B4D] border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#364F9F]/30"
                   />
                   <input
                     type="date"
                     value={b.expiryDate?.slice(0, 10) ?? ""}
-                    onChange={(e) => patchBatch(i, { expiryDate: e.target.value || null })}
+                    onChange={(e) => {
+                      const expiry = e.target.value || null;
+                      const patch: Partial<Batch> = { expiryDate: expiry };
+                      if (expiry && b.receivedDate) {
+                        const days = Math.round((new Date(expiry).getTime() - new Date(b.receivedDate).getTime()) / 86400000);
+                        patch.shelfLifeDays = days >= 0 ? days : null;
+                      }
+                      patchBatch(i, patch);
+                    }}
                     className={`h-7 px-2 text-[11px] text-[#162B4D] border rounded focus:outline-none focus:ring-1 focus:ring-[#364F9F]/30 ${expColor}`}
                   />
                   <input
