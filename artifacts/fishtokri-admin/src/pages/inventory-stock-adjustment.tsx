@@ -197,6 +197,7 @@ function ProductSelector({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const available = allProducts.filter((p) => !(usedIds.has(p.id) && p.id !== row.productId));
   const grouped: Record<string, Product[]> = {};
@@ -214,6 +215,8 @@ function ProductSelector({
 
   function doClose() { setOpen(false); setSelectedCategory(null); }
   function doOpen() { if (!open) setSelectedCategory(null); setOpen(true); }
+  function scheduleClose() { closeTimerRef.current = setTimeout(doClose, 120); }
+  function cancelClose() { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }
 
   useEffect(() => {
     if (!open) return;
@@ -231,13 +234,17 @@ function ProductSelector({
   if (open && wrapperRef.current) {
     const r = wrapperRef.current.getBoundingClientRect();
     style = {
-      position: "fixed", top: r.bottom + 4, left: r.left,
-      width: isSearching ? Math.max(r.width, 272) : 560, zIndex: 9999,
+      position: "fixed",
+      bottom: window.innerHeight - r.top + 4,
+      left: r.left,
+      width: isSearching ? Math.max(r.width, 272) : 560,
+      zIndex: 9999,
     };
   }
 
   const dropdown = (
-    <div ref={portalRef} style={style} className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+    <div ref={portalRef} style={style} className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden"
+      onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
       {isSearching ? (
         <>
           <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
@@ -322,7 +329,7 @@ function ProductSelector({
   );
 
   return (
-    <div ref={wrapperRef} className="relative w-full" onMouseEnter={doOpen}>
+    <div ref={wrapperRef} className="relative w-full" onMouseEnter={() => { cancelClose(); doOpen(); }} onMouseLeave={scheduleClose}>
       <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
       <input
         type="text" value={row.search}
@@ -366,8 +373,12 @@ function BatchSelector({
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selected = activeBatches.find((b) => b.id === selectedBatchId);
+
+  function scheduleClose() { closeTimerRef.current = setTimeout(() => setOpen(false), 120); }
+  function cancelClose() { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }
 
   useEffect(() => {
     if (!open) return;
@@ -383,11 +394,18 @@ function BatchSelector({
   let style: React.CSSProperties = { display: "none" };
   if (open && wrapperRef.current) {
     const r = wrapperRef.current.getBoundingClientRect();
-    style = { position: "fixed", top: r.bottom + 4, left: r.left, minWidth: Math.max(r.width, 280), zIndex: 9999 };
+    style = {
+      position: "fixed",
+      bottom: window.innerHeight - r.top + 4,
+      left: r.left,
+      minWidth: Math.max(r.width, 280),
+      zIndex: 9999,
+    };
   }
 
   const dropdown = (
-    <div ref={portalRef} style={style} className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+    <div ref={portalRef} style={style} className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden"
+      onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
       <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
         <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
           {mode === "add_existing" ? "Select Batch to Add Into" : "Select Batch to Reduce"}
@@ -442,7 +460,7 @@ function BatchSelector({
     : "bg-amber-50 border-amber-200 text-[#162B4D]";
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
+    <div ref={wrapperRef} className="relative w-full" onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
